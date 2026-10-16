@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SENTINEL-FL Mission Control</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root { --bg:#070b14; --panel:#0d1424; --line:#1c2a44; --ink:#e6f1ff; --quiet:#7f93b2; --cyan:#3ee6ff; --green:#2ee6a6; --amber:#ffb547; --red:#ff4d6d; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:radial-gradient(1200px 600px at 20% -10%, #10213f 0%, var(--bg) 60%); color:var(--ink);
+         font:14px/1.4 "Segoe UI", Inter, system-ui, sans-serif; }
+  header { display:flex; align-items:center; gap:16px; padding:14px 20px; border-bottom:1px solid var(--line); }
+  .logo { font-weight:700; letter-spacing:.18em; color:var(--cyan); text-shadow:0 0 12px rgba(62,230,255,.6); }
+  .sub { color:var(--quiet); font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
+  .pill { margin-left:auto; padding:4px 12px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:var(--quiet); }
+  .pill.live { color:var(--green); border-color:var(--green); box-shadow:0 0 10px rgba(46,230,166,.35); }
+  select { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:4px 8px; }
+  main { display:grid; grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); gap:14px; padding:14px 20px 20px; }
+  .panel { background:rgba(13,20,36,.85); border:1px solid var(--line); border-radius:10px; padding:12px 14px; position:relative; }
+  .panel h2 { margin:0 0 8px; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--quiet); font-weight:600; }
+  .kpis { grid-column:1 / -1; display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:14px; }
+  .kpi .v { font-size:26px; font-weight:700; color:var(--cyan); }
+  .kpi .l { color:var(--quiet); font-size:12px; }
+  #map { height:430px; border-radius:8px; background:#050811; }
+  .leaflet-container { background:#050811; }
+  .arc { stroke-dasharray:6 10; animation:flow 1.2s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset:-32; } }
+  .feed { height:190px; overflow:auto; font-family:ui-monospace, Consolas, monospace; font-size:12px; }
+  .feed div { padding:3px 0; border-bottom:1px dashed #15213a; color:#b9c8e3; }
+  .feed .flag, .feed .quarantine, .feed .leakage_blocked, .feed .signature_invalid { color:var(--red); }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  td, th { text-align:left; padding:4px 6px; border-bottom:1px solid #15213a; }
+  th { color:var(--quiet); font-weight:600; }
+  .ok { color:var(--green); } .bad { color:var(--red); }
+  button { background:transparent; color:var(--cyan); border:1px solid var(--cyan); border-radius:6px; padding:5px 12px; cursor:pointer; }
+  button:hover { background:rgba(62,230,255,.1); }
+  .aria { grid-column:1 / -1; display:grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); gap:14px; }
+  #chat { height:200px; overflow:auto; padding-right:6px; }
+  .msg { margin:6px 0; white-space:pre-wrap; }
+  .me { color:var(--quiet); } .bot { color:var(--ink); border-left:2px solid var(--cyan); padding-left:8px; }
+  .row { display:flex; gap:8px; margin-top:8px; }
+  input[type=text] { flex:1; background:#060a13; border:1px solid var(--line); color:var(--ink); border-radius:6px; padding:7px 10px; }
+  .chips button { font-size:11px; padding:3px 8px; margin:2px; color:var(--quiet); border-color:var(--line); }
+  .orb { width:12px; height:12px; border-radius:50%; background:var(--cyan); box-shadow:0 0 14px var(--cyan); display:inline-block; vertical-align:middle; margin-right:6px; animation:pulse 2s infinite; }
+  @keyframes pulse { 50% { opacity:.4; } }
+  @media (max-width: 900px) { main, .aria { grid-template-columns:minmax(0,1fr); } .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo">SENTINEL-FL</div><div class="sub">Mission Control · federated AML detection</div></div>
+  <select id="run"></select>
+  <span id="pill" class="pill">waiting for a run</span>
+</header>
+<main>
+  <section class="kpis">
+    <div class="panel kpi"><div class="v" id="k-round">–</div><div class="l">training round</div></div>
+    <div class="panel kpi"><div class="v" id="k-auc">–</div><div class="l">PR-AUC (illicit class)</div></div>
+    <div class="panel kpi"><div class="v" id="k-base">–</div><div class="l">centralised baseline PR-AUC</div></div>
+    <div class="panel kpi"><div class="v" id="k-eps">–</div><div class="l">max privacy budget ε spent</div></div>
+    <div class="panel kpi"><div class="v" id="k-q">–</div><div class="l">banks quarantined</div></div>
+  </section>
+  <section class="panel"><h2>Consortium · updates flowing to the aggregator</h2><div id="map"></div></section>
+  <section style="display:grid; gap:14px; grid-template-rows:auto auto;">
+    <div class="panel"><h2>Detection quality per round</h2><canvas id="chart" height="170"></canvas></div>
+    <div class="panel"><h2>Event feed</h2><div class="feed" id="feed"></div></div>
+  </section>
+  <section class="aria">
+    <div class="panel"><h2><span class="orb"></span>ARIA · Audit &amp; Risk Intelligence Assistant</h2>
+      <div id="chat"><div class="msg bot">ARIA online. I read the audit ledger and metrics only, never transactions. Ask me anything.</div></div>
+      <div class="chips">
+        <button>Did anyone poison the model?</button><button>What happened in round 5?</button>
+        <button>How much privacy budget has Bank A spent?</button><button>Prove the log was not altered</button>
+        <button>Which controls cover GDPR?</button><button>Write the incident report</button>
+      </div>
+      <div class="row"><input id="q" type="text" placeholder="Ask ARIA…"><button id="ask">Ask</button></div>
+    </div>
+    <div class="panel"><h2>Audit ledger <button id="verify" style="float:right">Verify chain</button></h2>
+      <div id="vres" style="margin-bottom:6px; color:var(--quiet)">Signed hash chain · metadata only</div>
+      <div style="height:210px; overflow:auto"><table><thead><tr><th>#</th><th>round</th><th>type</th><th>bank</th><th>hash</th></tr></thead><tbody id="ledger"></tbody></table></div>
+    </div>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const color = s => s === "quarantined" ? "#ff4d6d" : s === "flagged" ? "#ffb547" : "#2ee6a6";
+let run = "", markers = {}, arcs = {}, chart, lastRound = -1;
+
+const map = L.map("map", { zoomControl:false, attributionControl:true }).setView([48.5, 5.5], 4.6);
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  { attribution:"© OpenStreetMap © CARTO", subdomains:"abcd", maxZoom:8 }).addTo(map);
+
+function curve(a, b) {
+  const pts = [], mx = (a[0]+b[0])/2 + (b[1]-a[1])*0.18, my = (a[1]+b[1])/2 - (b[0]-a[0])*0.18;
+  for (let t = 0; t <= 1.0001; t += 0.05) pts.push([(1-t)*(1-t)*a[0] + 2*(1-t)*t*mx + t*t*b[0], (1-t)*(1-t)*a[1] + 2*(1-t)*t*my + t*t*b[1]]);
+  return pts;
+}
+
+function drawMap(st) {
+  const ag = st.aggregator, agp = [ag.lat, ag.lon];
+  if (!markers.__agg) markers.__agg = L.circleMarker(agp, { radius:11, color:"#3ee6ff", weight:2, fillColor:"#3ee6ff", fillOpacity:.25 })
+      .addTo(map).bindTooltip(ag.name, { permanent:true, direction:"right", className:"" });
+  for (const b of st.banks) {
+    const p = [b.lat, b.lon], c = color(b.status);
+    const tip = `${b.name} · ${b.country}<br>${b.status}${b.eps ? " · ε " + b.eps : ""}`;
+    if (!markers[b.id]) {
+      markers[b.id] = L.circleMarker(p, { radius:9, weight:2 }).addTo(map).bindTooltip(tip, { permanent:true, direction:"left" });
+      arcs[b.id] = L.polyline(curve(p, agp), { weight:2, opacity:.85, className:"arc" }).addTo(map);
+    }
+    markers[b.id].setStyle({ color:c, fillColor:c, fillOpacity:.6 }).setTooltipContent(tip);
+    arcs[b.id].setStyle({ color:c, opacity: b.status === "quarantined" ? .15 : .85, dashArray: b.status === "quarantined" ? "2 10" : null });
+  }
+}
+
+function drawChart(st) {
+  const h = st.metrics || [], base = st.baselines?.centralized?.pr_auc;
+  const data = { labels: h.map(x => x.round), datasets: [
+    { label:"Federated PR-AUC", data:h.map(x => x.pr_auc), borderColor:"#3ee6ff", backgroundColor:"rgba(62,230,255,.15)", fill:true, tension:.3, pointRadius:2 },
+    ...(base ? [{ label:"Centralised baseline", data:h.map(() => base), borderColor:"#7f93b2", borderDash:[5,5], pointRadius:0 }] : []) ] };
+  if (!chart) chart = new Chart($("chart"), { type:"line", data, options:{ animation:false, plugins:{ legend:{ labels:{ color:"#b9c8e3" } } },
+      scales:{ x:{ ticks:{ color:"#7f93b2" }, grid:{ color:"#15213a" } }, y:{ min:0, max:1, ticks:{ color:"#7f93b2" }, grid:{ color:"#15213a" } } } } });
+  else { chart.data = data; chart.update(); }
+}
+
+async function api(path) { const r = await fetch(path + (path.includes("?") ? "&" : "?") + "run=" + encodeURIComponent(run)); return r.json(); }
+
+async function refreshRuns() {
+  const runs = await (await fetch("/api/runs")).json();
+  const sel = $("run"), cur = sel.value;
+  sel.innerHTML = runs.map(r => `<option ${r.name === cur ? "selected" : ""}>${esc(r.name)}</option>`).join("");
+  if (!run && runs.length) run = runs[0].name;
+}
+
+async function tick() {
+  try {
+    await refreshRuns();
+    if (!run) return;
+    const st = await api("/api/state");
+    if (st.error) return;
+    const last = (st.metrics || []).at(-1);
+    $("pill").textContent = `${st.name} · ${st.status} · ${st.rule}${st.attack?.type !== "none" ? " · attack scenario" : ""}`;
+    $("pill").className = "pill" + (st.status === "running" ? " live" : "");
+    $("k-round").textContent = `${st.round}/${st.rounds}`;
+    $("k-auc").textContent = last ? last.pr_auc.toFixed(3) : "–";
+    $("k-base").textContent = st.baselines ? st.baselines.centralized.pr_auc.toFixed(3) : "n/a";
+    const eps = Math.max(0, ...st.banks.map(b => b.eps || 0));
+    $("k-eps").textContent = st.dp?.enabled ? eps.toFixed(2) : "DP off";
+    const q = st.banks.filter(b => b.status === "quarantined").length;
+    $("k-q").textContent = q; $("k-q").style.color = q ? "#ff4d6d" : "";
+    drawMap(st); drawChart(st);
+    if (st.round !== lastRound) {
+      lastRound = st.round;
+      const ev = await api("/api/events?limit=60");
+      $("feed").innerHTML = ev.reverse().map(e => `<div class="${esc(e.type)}">[r${e.round}] ${esc(e.msg)}</div>`).join("");
+      const led = await api("/api/ledger?limit=40");
+      $("ledger").innerHTML = led.reverse().map(e => `<tr><td>${e.idx}</td><td>${e.round ?? ""}</td><td class="${["quarantine","leakage_blocked","signature_invalid"].includes(e.type) ? "bad" : ""}">${esc(e.type)}</td><td>${esc(e.body.bank ?? "")}</td><td style="font-family:monospace">${esc(e.hash.slice(0,12))}…</td></tr>`).join("");
+    }
+  } catch (e) { $("pill").textContent = "API not reachable"; }
+}
+
+$("run").onchange = e => { run = e.target.value; lastRound = -1; };
+$("verify").onclick = async () => {
+  const v = await api("/api/verify");
+  $("vres").innerHTML = v.ok ? `<span class="ok">✔ ${esc(v.reason)}</span>` : `<span class="bad">✖ record #${v.bad_record}: ${esc(v.reason)}</span>`;
+};
+async function ask(text) {
+  if (!text.trim()) return;
+  $("chat").insertAdjacentHTML("beforeend", `<div class="msg me">› ${esc(text)}</div>`);
+  const r = await api("/api/aria?q=" + encodeURIComponent(text));
+  $("chat").insertAdjacentHTML("beforeend", `<div class="msg bot">${esc(r.answer)}\n<span style="color:#7f93b2;font-size:11px">[${esc(r.mode)} · tools: ${esc((r.tools||[]).map(t => t.tool).join(", "))}]</span></div>`);
+  $("chat").scrollTop = 1e9;
+}
+$("ask").onclick = () => { ask($("q").value); $("q").value = ""; };
+$("q").onkeydown = e => { if (e.key === "Enter") $("ask").click(); };
+document.querySelectorAll(".chips button").forEach(b => b.onclick = () => ask(b.textContent));
+tick(); setInterval(tick, 2000);
+</script>
+</body>
+</html>

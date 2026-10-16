@@ -1,0 +1,15 @@
+# FedProx + differential privacy (DP-SGD) with a consortium epsilon cap.
+name: fedprox_dp
+rounds: 20
+n_banks: 3
+local:
+  mu: 0.01
+  lr: 0.3                  # DP needs a larger step: clipped gradients are small
+dp:
+  enabled: true
+  noise_multiplier: 1.0
+  clip: 5.0
+  delta: 1.0e-5
+  epsilon_cap: 10.0        # a bank stops training once the next round would exceed this
+aggregation:
+  rule: fedavg

@@ -1,0 +1,18 @@
+# docker compose up --build           -> dashboard on http://localhost:8000
+# docker compose --profile llm up     -> also starts a local Ollama for ARIA (then: docker compose exec ollama ollama pull llama3.1:8b)
+services:
+  trainer:
+    build: .
+    command: ["python", "-m", "sentinel", "run", "--config", "configs/demo_attack.yaml"]
+    volumes: ["./runs:/app/runs"]
+  dashboard:
+    build: .
+    ports: ["8000:8000"]
+    volumes: ["./runs:/app/runs:ro"]      # read-only: the cockpit can never change the ledger
+    depends_on: [trainer]
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["llm"]
+    volumes: ["ollama:/root/.ollama"]
+volumes:
+  ollama:

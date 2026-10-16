@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+runs/
+experiments/results.*
+data/*.csv
+data/*.zip
+**/keys/
+*.pem
+.DS_Store
+.idea/
+.vscode/

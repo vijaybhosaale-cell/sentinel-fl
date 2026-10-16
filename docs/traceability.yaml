@@ -1,0 +1,33 @@
+# Regulation-to-control traceability matrix (read by ARIA's control_for tool).
+- regulation: GDPR
+  requirement: "GDPR Art. 5(1)(c) data minimisation"
+  control: "Only weights, hashes and counts leave a bank; payload schema check rejects anything else"
+  evidence: "ledger records of type leakage_blocked; sentinel/federation.py ALLOWED_PAYLOAD_KEYS"
+- regulation: GDPR
+  requirement: "GDPR Art. 25 data protection by design"
+  control: "Local training, DP-SGD with epsilon accounting and a consortium epsilon cap"
+  evidence: "state.json epsilon per bank; sentinel/privacy.py"
+- regulation: GDPR
+  requirement: "GDPR Art. 32 security of processing"
+  control: "Ed25519-signed updates, signature verification, quarantine of violating banks"
+  evidence: "ledger records signature_invalid and quarantine"
+- regulation: GDPR
+  requirement: "GDPR Art. 30 / 5(2) accountability"
+  control: "Tamper-evident hash-chain audit ledger signed by the operator"
+  evidence: "python -m sentinel verify"
+- regulation: AMLR
+  requirement: "AMLR (EU) 2024/1624 transaction monitoring"
+  control: "Shared detection model supports each bank's own monitoring; alerts stay at the bank"
+  evidence: "metrics per round in state.json"
+- regulation: AMLR
+  requirement: "Tipping-off prohibition"
+  control: "No alert, label or customer identifier is written to the ledger or the API"
+  evidence: "sentinel/server.py exposes metadata only"
+- regulation: AI Act
+  requirement: "EU AI Act record-keeping and human oversight"
+  control: "Every round logged; ARIA recommends, a human operator decides on quarantine"
+  evidence: "ledger round_commit records; ARIA answers cite record ids"
+- regulation: DORA
+  requirement: "DORA (EU) 2022/2554 ICT incident logging"
+  control: "Events log and ARIA incident report generated from ledger facts"
+  evidence: "events.jsonl; python -m sentinel aria --run NAME 'write the incident report'"

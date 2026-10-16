@@ -1,0 +1,5 @@
+# Next sprint: Flower / PyTorch / Opacus port and monitoring (not needed for the MVP)
+flwr>=1.36
+torch>=2.3
+opacus>=1.5
+prometheus-client>=0.20

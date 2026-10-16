@@ -1,0 +1,13 @@
+# Real IBM AMLworld data. Download HI-Small_Trans.csv from Kaggle into data/ first (see README).
+name: amlworld
+rounds: 20
+n_banks: 3
+data:
+  source: amlworld
+  path: data/HI-Small_Trans.csv
+  max_rows: 1000000        # start with 1M rows on a laptop; set null for all ~5M
+local:
+  mu: 0.01
+  steps: 60
+aggregation:
+  rule: fedavg

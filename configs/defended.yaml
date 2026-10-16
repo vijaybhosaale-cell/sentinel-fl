@@ -1,0 +1,15 @@
+# Full defences: anomaly detector + quarantine, trimmed mean, server-side norm clipping.
+name: defended
+rounds: 20
+n_banks: 3
+local:
+  mu: 0.01
+aggregation:
+  rule: trimmed_mean
+  trim: 1
+  server_clip_factor: 1.5
+defense:
+  anomaly: true
+  z_threshold: 3.5
+  cosine_threshold: 0.0
+  quarantine_after: 2

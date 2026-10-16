@@ -1,0 +1,18 @@
+# Live defence demo: Bank C (Netherlands) starts poisoning in round 4; watch it turn red.
+name: demo
+rounds: 15
+round_delay: 2.5           # seconds between rounds so the audience can follow
+n_banks: 3
+local:
+  mu: 0.01
+aggregation:
+  rule: trimmed_mean
+  server_clip_factor: 1.5
+defense:
+  anomaly: true
+  quarantine_after: 2
+attack:
+  type: label_flip          # label_flip | scale | backdoor | free_rider | leak | tamper_update | none
+  bank: C
+  start_round: 4
+  fraction: 1.0

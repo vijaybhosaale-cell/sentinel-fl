@@ -1,0 +1,15 @@
+# Plain FedAvg, 3 banks, synthetic AMLworld-like data. Base config for experiments.
+name: fedavg
+rounds: 20
+n_banks: 3
+data:
+  source: synthetic        # or "amlworld" (see configs/amlworld.yaml)
+  n_transactions: 60000
+  illicit_rate: 0.01
+local:
+  steps: 40
+  batch_size: 256
+  lr: 0.05
+  mu: 0.0                  # 0 = FedAvg, >0 = FedProx
+aggregation:
+  rule: fedavg
