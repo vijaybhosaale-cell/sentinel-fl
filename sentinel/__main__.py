@@ -91,6 +91,41 @@ def cmd_aria(a):
     print(f"ARIA [{r['mode']}] tools={[t['tool'] for t in r['tools']]}\n\n{r['answer']}")
 
 
+def cmd_aggregator(a):
+    from .aggregator_node import run_aggregator
+    run_aggregator(a.host, a.port, a.config, a.set, a.dir, a.fresh, a.auto_approve)
+
+
+def cmd_bank(a):
+    from .bank_node import run_bank
+    run_bank(a.id, a.aggregator, a.host, a.port, a.config, a.set, a.dir, not a.no_email)
+
+
+def cmd_cluster(a):
+    """Fallback / rehearsal: aggregator + N banks on ONE machine, each in its own process."""
+    import os
+    import subprocess
+    import sys
+    env = {**os.environ, "SENTINEL_ADMIN_TOKEN": os.environ.get("SENTINEL_ADMIN_TOKEN", "demo")}
+    procs = [subprocess.Popen([sys.executable, "-m", "sentinel", "aggregator", "--port", str(a.port), "--host", a.host] +
+                              (["--fresh"] if a.fresh else []) + (["--auto-approve"] if a.auto_approve else []), env=env)]
+    time.sleep(1.5)
+    ids = "ABCDE"[:a.banks]
+    for i, b in enumerate(ids):
+        procs.append(subprocess.Popen([sys.executable, "-m", "sentinel", "bank", "--id", b, "--port", str(a.port + 101 + i),
+                                       "--aggregator", f"http://127.0.0.1:{a.port}", "--set", f"n_banks={a.banks}"], env=env))
+    print(f"\nControl room : http://127.0.0.1:{a.port}   (operator token: {env['SENTINEL_ADMIN_TOKEN']})")
+    for i, b in enumerate(ids):
+        print(f"Bank {b} portal: http://127.0.0.1:{a.port + 101 + i}")
+    print("Ctrl+C stops everything.\n")
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        for p in procs:
+            p.terminate()
+
+
 def main():
     p = argparse.ArgumentParser(prog="sentinel", description="SENTINEL-FL: federated AML detection with audit and ARIA")
     sp = p.add_subparsers(dest="cmd", required=True)
@@ -110,6 +145,24 @@ def main():
     s.add_argument("--value", default="null", help="JSON value; default flips a boolean field"); s.set_defaults(fn=cmd_tamper)
     s = sp.add_parser("aria"); s.add_argument("--runs", default="runs"); s.add_argument("--run", required=True)
     s.add_argument("question", nargs="+"); s.set_defaults(fn=cmd_aria)
+    s = sp.add_parser("aggregator", help="consortium aggregator / control room")
+    s.add_argument("--host", default="0.0.0.0"); s.add_argument("--port", type=int, default=8000)
+    s.add_argument("--config", default=None); s.add_argument("--set", action="append", default=[])
+    s.add_argument("--dir", default="nodes/aggregator"); s.add_argument("--fresh", action="store_true", help="start with an empty ledger")
+    s.add_argument("--auto-approve", action="store_true", help="approve banks automatically (skip the access-control step)")
+    s.set_defaults(fn=cmd_aggregator)
+    s = sp.add_parser("bank", help="one bank node with its own portal")
+    s.add_argument("--id", required=True, help="A, B, C ...")
+    s.add_argument("--aggregator", required=True, help="e.g. http://192.168.43.10:8000")
+    s.add_argument("--host", default="127.0.0.1"); s.add_argument("--port", type=int, default=8101)
+    s.add_argument("--config", default=None); s.add_argument("--set", action="append", default=[])
+    s.add_argument("--dir", default=None); s.add_argument("--no-email", action="store_true")
+    s.set_defaults(fn=cmd_bank)
+    s = sp.add_parser("cluster", help="aggregator + banks on one machine (fallback)")
+    s.add_argument("--banks", type=int, default=3); s.add_argument("--port", type=int, default=8000)
+    s.add_argument("--host", default="127.0.0.1"); s.add_argument("--fresh", action="store_true")
+    s.add_argument("--auto-approve", action="store_true")
+    s.set_defaults(fn=cmd_cluster)
     a = p.parse_args()
     a.fn(a)
 

@@ -1,0 +1,30 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/app.css"><script src="/static/app.js"></script><style>:root{--accent:#2ee6a6}</style></head><body>
+<main><div id="rt"></div>
+  <h1 class="page">Data residency evidence</h1>
+  <p class="lead">Every message this node sends is logged here with its destination, size and field names. This is the evidence that transaction data never leaves the bank's jurisdiction:
+  only model weights, sample counts, privacy budget, evaluation scores and alert counts go out.</p>
+  <div id="verdict"></div>
+  <div class="grid g4">
+    <div class="panel kpi green"><div class="v" id="k-rows">–</div><div class="l">raw transaction rows sent</div></div>
+    <div class="panel kpi"><div class="v" id="k-local">–</div><div class="l">rows kept on this machine</div></div>
+    <div class="panel kpi"><div class="v" id="k-bytes">–</div><div class="l">total data sent</div></div>
+    <div class="panel kpi red"><div class="v" id="k-block">–</div><div class="l">messages refused by the aggregator</div></div>
+  </div>
+  <div class="panel" style="margin-top:14px"><h2>Outbound messages (newest first) <span class="right muted" id="dest"></span></h2><div class="scroll h560"><table><thead><tr><th>Time</th><th>Endpoint</th><th>Size</th><th>Fields sent</th><th>Raw rows</th><th>Result</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+</main>
+<script>
+async function bankShell(page) { const s = await api("/api/status"); shell("bank", `${s.bank.name} · ${page}`, `${s.bank.name} portal · ${s.bank.city}, ${s.bank.country}`); return s; }
+function bankPill(s) { const st = s.agg_status; pill(`${s.bank.name} · ${s.connected ? "aggregator " + st : "aggregator unreachable"} · round ${s.round}`, !s.connected || st === "quarantined" || st === "revoked" ? "bad" : st === "approved" ? "live" : ""); }
+function redBanner(s) { const el = $("#rt"); if (!el) return; el.innerHTML = s.red_team ? `<div class="banner red">⚠ RED-TEAM EXERCISE: this node has been instructed to behave maliciously (${esc(s.red_team.type)}). The consortium is expected to detect it.</div>` : (s.agg_status === "quarantined" ? `<div class="banner red">⛔ This bank is QUARANTINED by the consortium. It receives no training tasks until the operator reinstates it.</div>` : ""); }
+(async () => { await bankShell("Data residency"); every(2000, async () => { const s = await api("/api/status"); bankPill(s); redBanner(s);
+  const r = await api("/api/residency");
+  $("#k-rows").textContent = r.raw_rows_sent; $("#k-rows").parentElement.className = "panel kpi " + (r.raw_rows_sent ? "red" : "green");
+  $("#k-local").textContent = r.local_rows.toLocaleString(); $("#k-bytes").textContent = (r.total_bytes / 1024).toFixed(0) + " KB"; $("#k-block").textContent = r.blocked_by_aggregator; $("#k-block").parentElement.className = "panel kpi " + (r.blocked_by_aggregator ? "red" : "green");
+  $("#dest").textContent = "destinations: " + (r.destinations.join(", ") || "none");
+  $("#verdict").innerHTML = r.raw_rows_sent ? `<div class="banner red">⚠ This node tried to send ${r.raw_rows_sent} raw rows (red-team exfiltration). The aggregator refused the message and stored nothing.</div>`
+    : '<div class="banner green">✔ No transaction row has left this machine. Only model updates and aggregate metrics were sent.</div>';
+  $("#rows").innerHTML = r.outbound.map(x => `<tr><td>${clock(x.ts)}</td><td class="mono">${esc(x.method)} ${esc(x.endpoint)}</td><td>${(x.bytes / 1024).toFixed(1)} KB</td>
+    <td class="muted" style="max-width:520px">${esc(x.fields.join(", "))}</td><td class="${x.raw_rows ? "bad" : "ok"}">${x.raw_rows}</td><td class="${/refused|unreachable/.test(x.result) ? "bad" : "ok"}">${esc(x.result)}</td></tr>`).join("") || '<tr><td colspan="6" class="muted">nothing sent yet</td></tr>';
+}); })();
+</script></body></html>

@@ -1,0 +1,35 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/app.css"><script src="/static/app.js"></script><style>:root{--accent:#2ee6a6}</style></head><body>
+<main><div id="rt"></div>
+  <h1 class="page">AML alerts</h1>
+  <p class="lead">Transactions flagged by the consortium model. High risk means the score is at or above the operating threshold; medium means at or above half of it.
+  These case details are internal to the bank. The consortium only receives the counts and pattern names.</p>
+  <div class="grid g4">
+    <div class="panel kpi red"><div class="v" id="k-h">–</div><div class="l">high-risk alerts</div></div>
+    <div class="panel kpi amber"><div class="v" id="k-m">–</div><div class="l">medium-risk alerts</div></div>
+    <div class="panel kpi green"><div class="v" id="k-p">–</div><div class="l">confirmed laundering (synthetic ground truth)</div></div>
+    <div class="panel kpi violet"><div class="v" id="k-e">–</div><div class="l">alert e-mails to the AML officer</div></div>
+  </div>
+  <div class="grid g32" style="margin-top:14px">
+    <div class="panel"><h2>Alert queue <span class="right"><select id="sev"><option value="">all severities</option><option value="high">high</option><option value="medium">medium</option></select></span></h2>
+      <div class="scroll h560"><table><thead><tr><th>Round</th><th>Time</th><th>From → to</th><th>Amount</th><th>Format</th><th>Score</th><th>Severity</th><th>Patterns</th><th>Ground truth</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+    <div class="grid"><div class="panel"><h2>Patterns</h2><div id="pat"></div></div>
+      <div class="panel"><h2>E-mails to the AML officer</h2><div class="feed scroll h320" id="mail"></div></div></div>
+  </div>
+</main>
+<script>
+async function bankShell(page) { const s = await api("/api/status"); shell("bank", `${s.bank.name} · ${page}`, `${s.bank.name} portal · ${s.bank.city}, ${s.bank.country}`); return s; }
+function bankPill(s) { const st = s.agg_status; pill(`${s.bank.name} · ${s.connected ? "aggregator " + st : "aggregator unreachable"} · round ${s.round}`, !s.connected || st === "quarantined" || st === "revoked" ? "bad" : st === "approved" ? "live" : ""); }
+function redBanner(s) { const el = $("#rt"); if (!el) return; el.innerHTML = s.red_team ? `<div class="banner red">⚠ RED-TEAM EXERCISE: this node has been instructed to behave maliciously (${esc(s.red_team.type)}). The consortium is expected to detect it.</div>` : (s.agg_status === "quarantined" ? `<div class="banner red">⛔ This bank is QUARANTINED by the consortium. It receives no training tasks until the operator reinstates it.</div>` : ""); }
+(async () => { await bankShell("Alerts"); every(2500, async () => { const s = await api("/api/status"); bankPill(s); redBanner(s);
+  const all = await api("/api/alerts?limit=600"), sev = $("#sev").value, a = all.filter(x => !sev || x.severity === sev);
+  $("#k-h").textContent = all.filter(x => x.severity === "high").length; $("#k-m").textContent = all.filter(x => x.severity === "medium").length;
+  $("#k-p").textContent = all.length ? `${all.filter(x => x.ground_truth === "laundering").length} / ${all.length}` : "–";
+  $("#rows").innerHTML = a.map(x => `<tr><td>${x.round}</td><td>${esc(x.time)}</td><td class="mono">${esc(x.from_account)} → ${esc(x.to_account)}</td><td>${x.amount.toLocaleString()} ${esc(x.currency)}</td>
+    <td>${esc(x.format)}</td><td>${x.score}</td><td>${badge(x.severity)}</td><td class="muted">${esc(x.patterns.join(", "))}</td><td class="${x.ground_truth === "laundering" ? "bad" : "muted"}">${x.ground_truth}</td></tr>`).join("") || '<tr><td colspan="9" class="muted">no alert yet: alerts start from round 2</td></tr>';
+  const pc = {}; all.forEach(x => x.patterns.forEach(p => pc[p] = (pc[p] || 0) + 1));
+  barChart($("#pat"), Object.entries(pc).sort((x, y) => y[1] - x[1]).map(([k, v]) => ({ label: k, value: v, color: "#ff4d6d" })), { labelWidth: 130 });
+  const n = await api("/api/notifications"); $("#k-e").textContent = n.items.length;
+  $("#mail").innerHTML = n.items.map(m => `<div class="${m.severity}">${clock(m.ts)} · ${esc(m.subject)}<br><span class="muted">${esc(m.status)}</span></div>`).join("") || '<div class="muted">no e-mail yet</div>';
+}); })();
+</script></body></html>

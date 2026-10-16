@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/app.css"><script src="/static/app.js"></script><style>:root{--accent:#2ee6a6}</style></head><body>
+<main><div id="rt"></div>
+  <h1 class="page">Local training</h1>
+  <p class="lead">Each round, this node receives the global model, checks its hash, evaluates it on local test data, and trains locally with FedProx and optional DP-SGD.
+  It then signs the new weights with its Ed25519 key and sends them. Only the weights, the sample count and the privacy budget spent are transmitted.</p>
+  <div class="grid g2">
+    <div class="panel"><h2>Consortium model quality on this bank's data</h2><div id="chart"></div></div>
+    <div class="panel"><h2>Training time and bytes sent per round</h2><div id="chart2"></div></div>
+  </div>
+  <div class="panel" style="margin-top:14px"><h2>Round history</h2><div class="scroll h420"><table><thead><tr><th>Round</th><th>Local PR-AUC (received model)</th><th>F1</th><th>Training</th><th>ε round / total</th><th>Bytes sent</th><th>Update hash (signed)</th><th>Aggregator response</th><th>Red team</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+</main>
+<script>
+async function bankShell(page) { const s = await api("/api/status"); shell("bank", `${s.bank.name} · ${page}`, `${s.bank.name} portal · ${s.bank.city}, ${s.bank.country}`); return s; }
+function bankPill(s) { const st = s.agg_status; pill(`${s.bank.name} · ${s.connected ? "aggregator " + st : "aggregator unreachable"} · round ${s.round}`, !s.connected || st === "quarantined" || st === "revoked" ? "bad" : st === "approved" ? "live" : ""); }
+function redBanner(s) { const el = $("#rt"); if (!el) return; el.innerHTML = s.red_team ? `<div class="banner red">⚠ RED-TEAM EXERCISE: this node has been instructed to behave maliciously (${esc(s.red_team.type)}). The consortium is expected to detect it.</div>` : (s.agg_status === "quarantined" ? `<div class="banner red">⛔ This bank is QUARANTINED by the consortium. It receives no training tasks until the operator reinstates it.</div>` : ""); }
+(async () => { await bankShell("Local training"); every(2000, async () => { const s = await api("/api/status"); bankPill(s); redBanner(s);
+  const h = await api("/api/training");
+  lineChart($("#chart"), [{ name: "local PR-AUC", color: "#2ee6a6", fill: true, points: h.filter(x => x.pr_auc != null).map(x => [x.round - 1, x.pr_auc]) },
+    { name: "local F1", color: "#a78bfa", points: h.filter(x => x.f1 != null).map(x => [x.round - 1, x.f1]) }], { ymin: 0, ymax: 1, xmin: 1, xlabel: "model version" });
+  const mx = Math.max(1, ...h.map(x => (x.bytes_sent || 0) / 1024));
+  lineChart($("#chart2"), [{ name: "KB sent", color: "#3ee6ff", points: h.filter(x => x.bytes_sent).map(x => [x.round, x.bytes_sent / 1024]) },
+    { name: "training seconds ×100", color: "#ffb547", points: h.filter(x => x.train_seconds != null).map(x => [x.round, x.train_seconds * 100]) }], { ymin: 0, ymax: mx * 1.2, yd: 0, xmin: 1, xlabel: "round" });
+  $("#rows").innerHTML = h.slice().reverse().map(x => `<tr><td>${x.round}</td><td>${fmt(x.pr_auc)}</td><td>${fmt(x.f1)}</td><td>${x.train_seconds ?? "–"} s</td>
+    <td>${fmt(x.eps_round, 3)} / ${fmt(x.eps_total, 3)}</td><td>${(x.bytes_sent || 0).toLocaleString()}</td><td class="mono">${(x.update_hash || "–").slice(0, 16)}</td>
+    <td class="${/refused/.test(x.submitted) ? "bad" : "ok"}">${esc(x.submitted)}</td><td class="${x.red_team ? "bad" : "muted"}">${esc(x.red_team || "–")}</td></tr>`).join("") || '<tr><td colspan="9" class="muted">waiting for the first round</td></tr>';
+}); })();
+</script></body></html>

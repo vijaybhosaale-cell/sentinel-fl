@@ -1,0 +1,12 @@
+# One bank on its own laptop. On each teammate's laptop:
+#   1. copy .env.bank.example to .env.bank and set BANK_ID and AGGREGATOR_URL (the aggregator laptop's IP)
+#   2. docker compose -f docker-compose.bank.yml --env-file .env.bank up --build
+#   3. open http://localhost:8101 for this bank's portal
+services:
+  bank:
+    build: .
+    command: ["sh", "-c", "python -m sentinel bank --id $${BANK_ID} --host 0.0.0.0 --port 8101 --aggregator $${AGGREGATOR_URL} --dir nodes/bank_$${BANK_ID}"]
+    environment: ["BANK_ID=${BANK_ID:-A}", "AGGREGATOR_URL=${AGGREGATOR_URL:-http://192.168.43.10:8000}"]
+    ports: ["8101:8101"]
+    volumes: ["./nodes:/app/nodes"]
+    restart: unless-stopped

@@ -1,18 +1,67 @@
-# docker compose up --build           -> dashboard on http://localhost:8000
-# docker compose --profile llm up     -> also starts a local Ollama for ARIA (then: docker compose exec ollama ollama pull llama3.1:8b)
+# SENTINEL-FL version 2: one aggregator + three bank nodes, each in its own container and network.
+#
+#   docker compose up --build                     -> control room http://localhost:8000, banks :8101 :8102 :8103
+#   docker compose --profile monitoring up        -> + Prometheus :9090 and Grafana :3000 (admin / admin)
+#   docker compose --profile llm up               -> + Ollama for ARIA (then: docker compose exec ollama ollama pull llama3.1:8b)
+#   docker compose --profile v1 up trainer        -> the original single-process demo
+#
+# Operator token for the control room: "demo" (change SENTINEL_ADMIN_TOKEN below for real use).
+# For one bank per laptop use docker-compose.bank.yml on each teammate's laptop instead (docs/MULTI_LAPTOP_SETUP.md).
+x-bank: &bank
+  build: .
+  depends_on: [aggregator]
+  restart: unless-stopped
 services:
-  trainer:
+  aggregator:
     build: .
-    command: ["python", "-m", "sentinel", "run", "--config", "configs/demo_attack.yaml"]
-    volumes: ["./runs:/app/runs"]
-  dashboard:
-    build: .
+    command: ["python", "-m", "sentinel", "aggregator", "--host", "0.0.0.0", "--port", "8000", "--dir", "nodes/aggregator"]
+    environment: [SENTINEL_ADMIN_TOKEN=demo]
+    env_file: { path: .env, required: false }
     ports: ["8000:8000"]
-    volumes: ["./runs:/app/runs:ro"]      # read-only: the cockpit can never change the ledger
-    depends_on: [trainer]
+    volumes: ["./nodes/aggregator:/app/nodes/aggregator", "./experiments:/app/experiments:ro", "./runs:/app/runs:ro"]
+    networks: [consortium]
+  bank-a:
+    <<: *bank
+    command: ["python", "-m", "sentinel", "bank", "--id", "A", "--host", "0.0.0.0", "--port", "8101", "--aggregator", "http://aggregator:8000"]
+    ports: ["8101:8101"]
+    volumes: ["./nodes/bank_A:/app/nodes/bank_A"]
+    networks: [consortium]
+  bank-b:
+    <<: *bank
+    command: ["python", "-m", "sentinel", "bank", "--id", "B", "--host", "0.0.0.0", "--port", "8101", "--aggregator", "http://aggregator:8000"]
+    ports: ["8102:8101"]
+    volumes: ["./nodes/bank_B:/app/nodes/bank_B"]
+    networks: [consortium]
+  bank-c:
+    <<: *bank
+    command: ["python", "-m", "sentinel", "bank", "--id", "C", "--host", "0.0.0.0", "--port", "8101", "--aggregator", "http://aggregator:8000"]
+    ports: ["8103:8101"]
+    volumes: ["./nodes/bank_C:/app/nodes/bank_C"]
+    networks: [consortium]
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: ["monitoring"]
+    volumes: ["./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["9090:9090"]
+    networks: [consortium]
+  grafana:
+    image: grafana/grafana:latest
+    profiles: ["monitoring"]
+    environment: [GF_SECURITY_ADMIN_PASSWORD=admin]
+    volumes: ["./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro", "./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro"]
+    ports: ["3000:3000"]
+    networks: [consortium]
   ollama:
     image: ollama/ollama:latest
     profiles: ["llm"]
     volumes: ["ollama:/root/.ollama"]
+    networks: [consortium]
+  trainer:
+    build: .
+    profiles: ["v1"]
+    command: ["python", "-m", "sentinel", "demo", "--host", "0.0.0.0", "--port", "8080"]
+    ports: ["8080:8080"]
+networks:
+  consortium: {}
 volumes:
-  ollama:
+  ollama: {}

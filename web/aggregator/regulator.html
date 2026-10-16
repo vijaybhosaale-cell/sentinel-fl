@@ -1,0 +1,36 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/app.css"><script src="/static/app.js"></script>
+<style>:root{--accent:#a78bfa}</style></head><body>
+<main>
+  <h1 class="page">Regulator & compliance view</h1>
+  <p class="lead">Read-only view for a supervisor or data protection officer. It shows how each regulatory requirement maps to a working control and its evidence,
+  the privacy budget each bank has spent, and ARIA, an assistant that answers from the audit ledger and cites record numbers. ARIA never accesses transactions.</p>
+  <div class="grid g2">
+    <div class="panel"><h2>Regulation → control → evidence</h2><div class="scroll h420"><table><thead><tr><th>Requirement</th><th>Control in SENTINEL-FL</th><th>Evidence</th></tr></thead><tbody id="mx"></tbody></table></div></div>
+    <div class="panel"><h2><span class="pulse" style="color:#3ee6ff">●</span> ARIA · Audit & Risk Intelligence Assistant</h2>
+      <div class="chat" id="chat"><div class="msg bot">ARIA online. I only read the audit ledger and the run metrics. Ask me anything.</div></div>
+      <div class="chips"><button>Did anyone poison the model?</button><button>What happened in round 8?</button><button>How much privacy budget has Bank A spent?</button>
+        <button>Prove the log was not altered</button><button>Which controls cover GDPR?</button><button>Write the incident report</button></div>
+      <div class="row" style="margin-top:8px"><input id="q" style="flex:1" placeholder="Ask ARIA…"><button class="solid" id="ask">Ask</button></div></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="panel"><h2>Privacy budget per bank (ε, lower = more private)</h2><div id="eps"></div><p class="muted" id="dpinfo"></p></div>
+    <div class="panel"><h2>Participants under supervision</h2><table><thead><tr><th>Bank</th><th>Jurisdiction</th><th>Access</th><th>Status</th></tr></thead><tbody id="parts"></tbody></table></div>
+  </div>
+</main>
+<script>
+shell("aggregator", "Regulator", "Read-only supervisory view");
+async function ask(t) { if (!t.trim()) return; $("#chat").insertAdjacentHTML("beforeend", `<div class="msg me">› ${esc(t)}</div>`);
+  const r = await api("/api/aria?q=" + encodeURIComponent(t));
+  $("#chat").insertAdjacentHTML("beforeend", `<div class="msg bot">${esc(r.answer)}\n<span class="muted" style="font-size:11px">[${esc(r.mode)} · tools: ${esc((r.tools || []).map(x => x.tool).join(", "))}]</span></div>`); $("#chat").scrollTop = 1e9; }
+$("#ask").onclick = () => { ask($("#q").value); $("#q").value = ""; }; $("#q").onkeydown = e => { if (e.key === "Enter") $("#ask").click(); };
+document.querySelectorAll(".chips button").forEach(b => b.onclick = () => ask(b.textContent));
+every(3000, async () => {
+  const c = await api("/api/compliance"); pill("read-only", "live");
+  $("#mx").innerHTML = c.matrix.map(r => `<tr><td><b style="color:#a78bfa">${esc(r.requirement)}</b></td><td>${esc(r.control)}</td><td class="muted">${esc(r.evidence)}</td></tr>`).join("");
+  const cap = c.policy?.dp?.epsilon_cap ?? 10;
+  barChart($("#eps"), c.banks.map(b => ({ label: `Bank ${b.id} · ${b.country}`, value: b.eps || 0, text: `${fmt(b.eps || 0, 2)} / ${cap}`, color: "#a78bfa" })), { max: cap, labelWidth: 150 });
+  $("#dpinfo").textContent = c.policy ? (c.policy.dp.enabled ? `DP-SGD on · noise σ ${c.policy.dp.noise_multiplier} · clip ${c.policy.dp.clip} · cap ε ${cap} (δ = 1e-5)` : "Differential privacy is off in the current run.") : "No run yet.";
+  $("#parts").innerHTML = c.banks.map(b => `<tr><td>${esc(b.name)}</td><td>${esc(b.country)}</td><td>${badge(b.access)}</td><td>${badge(b.status)}</td></tr>`).join("");
+});
+</script></body></html>

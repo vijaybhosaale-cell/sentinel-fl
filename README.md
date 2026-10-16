@@ -19,7 +19,34 @@ Three (or five) simulated European banks train one anti-money-laundering model t
 - **ARIA:** a copilot that answers questions such as *"Did anyone poison the model?"* by calling read-only tools over the ledger, citing record numbers, and writing incident reports. It uses a local LLM through Ollama when available, and a deterministic offline mode otherwise.
 - **Red team:** label flipping, boosted scaling, backdoor, free-riding, raw-data exfiltration and man-in-the-middle tampering, each switchable from a config flag.
 
-## Quick start (5 minutes)
+## Version 2: distributed consortium (multi-page, multi-laptop)
+
+Version 2 runs the aggregator and every bank as **separate nodes** with their own web portals. The banks pull work from the
+aggregator, like Flower clients, so they can run on four different laptops over one hotspot.
+
+```bash
+python -m sentinel cluster --fresh          # everything on one laptop: aggregator + Banks A, B, C
+```
+
+| Open | What it is |
+| --- | --- |
+| http://127.0.0.1:8000 | **Aggregator**: control room, registry & access, training rounds, attack lab, audit ledger, alerts & e-mail, regulator · ARIA, results (operator token `demo`) |
+| http://127.0.0.1:8101 / 8102 / 8103 | **Bank A / B / C portals**: overview, transactions, AML alerts, local training, privacy budget, data residency |
+
+On four laptops: `python -m sentinel aggregator --fresh` on laptop 1, and
+`python -m sentinel bank --id A --aggregator http://<laptop-1-IP>:8000` on each bank laptop.
+With Docker: `docker compose up --build` (add `--profile monitoring` for Prometheus on :9090 and Grafana on :3000).
+
+Alerts go **both** to the dashboards (live) and by **e-mail** (SMTP, or an outbox folder when SMTP is not set up).
+
+| Document | Contents |
+| --- | --- |
+| [docs/ARCHITECTURE_V2.md](docs/ARCHITECTURE_V2.md) | Components, round protocol, security controls, module map, API |
+| [docs/MULTI_LAPTOP_SETUP.md](docs/MULTI_LAPTOP_SETUP.md) | Demo-day setup, network, firewall, troubleshooting |
+| [docs/OPERATIONS_GUIDE.md](docs/OPERATIONS_GUIDE.md) | Every page, what it proves, 8-minute demo script |
+| [docs/ALERTS_AND_EMAIL.md](docs/ALERTS_AND_EMAIL.md) | Alert levels, e-mail triggers, Gmail app-password setup |
+
+## Quick start, version 1 single-process demo (5 minutes)
 
 Requires Python 3.10+.
 
@@ -28,7 +55,7 @@ git clone https://github.com/<your-account>/sentinel-fl.git
 cd sentinel-fl
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m unittest discover -s tests -v                 # 16 tests, ~15 s
+python -m unittest discover -s tests -v                 # 17 tests, ~25 s
 python -m sentinel demo                                 # then open http://127.0.0.1:8000
 ```
 

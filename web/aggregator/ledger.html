@@ -1,0 +1,42 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/app.css"><script src="/static/app.js"></script>
+<style>:root{--accent:#ffb547}</style></head><body>
+<main>
+  <h1 class="page">Audit ledger</h1>
+  <p class="lead">An append-only hash chain. Each record stores the previous record's hash and is signed by the operator key, and each round is sealed with a Merkle root.
+  The ledger holds metadata only: no transactions, labels or model weights.</p>
+  <div id="vbanner" class="banner amber">Press “Verify chain” to recompute every hash and signature.</div>
+  <div class="grid g3">
+    <div class="panel"><h2>Integrity check</h2><button class="solid" id="verify">Verify chain</button>
+      <p class="muted">Recomputes all hashes, links and Ed25519 signatures and stops at the first bad record.</p></div>
+    <div class="panel"><h2>Demo · insider edit</h2><div class="row"><label class="f">Record #<input id="tidx" type="number" style="width:90px"></label>
+      <button class="danger" id="tamper">Edit record without re-signing</button></div>
+      <p class="muted">Simulates an insider changing a stored record directly in the database. Run Verify afterwards.</p></div>
+    <div class="panel"><h2>Filter</h2><select id="ftype"><option value="">all record types</option></select>
+      <p class="muted" id="count"></p></div>
+  </div>
+  <div class="grid g32" style="margin-top:14px">
+    <div class="panel"><h2>Records (newest first)</h2><div class="scroll h560"><table><thead><tr><th>#</th><th>Round</th><th>Type</th><th>Bank</th><th>Hash</th><th>Prev</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+    <div class="panel"><h2>Record detail</h2><pre class="json" id="detail">click a record</pre></div>
+  </div>
+</main>
+<script>
+shell("aggregator", "Ledger", "Aggregator · audit");
+let REC = [], BAD = null;
+$("#verify").onclick = async () => { const v = await api("/api/verify"); BAD = v.bad_record;
+  $("#vbanner").className = "banner " + (v.ok ? "green" : "red");
+  $("#vbanner").innerHTML = v.ok ? `✔ ${esc(v.reason)} · head ${esc(v.head.slice(0, 16))}…` : `✖ Integrity failure at record #${v.bad_record}: ${esc(v.reason)}. Records #0 to #${v.bad_record - 1} remain trustworthy.`; render(); };
+$("#tamper").onclick = async () => { try { const r = await post("/api/ledger/tamper", { idx: +$("#tidx").value }); toast(`Record #${r.edited}: ${esc(r.field)} changed from ${esc(JSON.stringify(r.old))} to ${esc(JSON.stringify(r.new))}. Now press Verify.`, 6000); load(); } catch (e) { toast(`<span class="bad">${esc(e.message)}</span>`); } };
+$("#ftype").onchange = () => render();
+function show(i) { $("#detail").textContent = JSON.stringify(REC.find(r => r.idx === i), null, 2); }
+function render() {
+  const f = $("#ftype").value, rows = REC.filter(r => !f || r.type === f);
+  $("#count").textContent = `${rows.length} records shown of ${REC.length}`;
+  $("#rows").innerHTML = rows.map(r => `<tr class="click" onclick="show(${r.idx})" style="${r.idx === BAD ? "background:#ff4d6d22" : ""}"><td>${r.idx}</td><td>${r.round ?? ""}</td>
+    <td>${/quarantine|leakage|signature|denied|revoked/.test(r.type) ? '<span class="bad">' + esc(r.type) + "</span>" : esc(r.type)}</td><td>${esc(r.body.bank ?? "")}</td>
+    <td class="mono">${r.hash.slice(0, 14)}…</td><td class="mono muted">${r.prev_hash.slice(0, 10)}…</td></tr>`).join("");
+}
+async function load() { REC = await api("/api/ledger?limit=5000"); const types = [...new Set(REC.map(r => r.type))].sort(), cur = $("#ftype").value;
+  $("#ftype").innerHTML = '<option value="">all record types</option>' + types.map(t => `<option ${t === cur ? "selected" : ""}>${t}</option>`).join(""); render(); pill(`${REC.length} records`, "live"); }
+every(4000, load);
+</script></body></html>

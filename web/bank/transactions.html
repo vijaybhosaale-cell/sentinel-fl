@@ -1,0 +1,22 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/app.css"><script src="/static/app.js"></script><style>:root{--accent:#2ee6a6}</style></head><body>
+<main><div id="rt"></div>
+  <h1 class="page">Local transactions</h1>
+  <p class="lead">The live transaction stream of this bank. These rows never leave this machine. Each round, the next slice of the stream is scored with the latest consortium model.</p>
+  <div class="panel"><h2>Stream <span class="right row"><select id="only"><option value="">all</option><option value="scored">scored</option><option value="flagged">risk ≥ 0.5</option></select>
+    <button class="small" id="prev">◀</button><span id="pos" class="muted"></span><button class="small" id="next">▶</button></span></h2>
+    <div class="scroll h560"><table><thead><tr><th>#</th><th>Time</th><th>From account</th><th>To account</th><th>To bank</th><th>Amount</th><th>Currency</th><th>Format</th><th>Risk score</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+</main>
+<script>
+async function bankShell(page) { const s = await api("/api/status"); shell("bank", `${s.bank.name} · ${page}`, `${s.bank.name} portal · ${s.bank.city}, ${s.bank.country}`); return s; }
+function bankPill(s) { const st = s.agg_status; pill(`${s.bank.name} · ${s.connected ? "aggregator " + st : "aggregator unreachable"} · round ${s.round}`, !s.connected || st === "quarantined" || st === "revoked" ? "bad" : st === "approved" ? "live" : ""); }
+function redBanner(s) { const el = $("#rt"); if (!el) return; el.innerHTML = s.red_team ? `<div class="banner red">⚠ RED-TEAM EXERCISE: this node has been instructed to behave maliciously (${esc(s.red_team.type)}). The consortium is expected to detect it.</div>` : (s.agg_status === "quarantined" ? `<div class="banner red">⛔ This bank is QUARANTINED by the consortium. It receives no training tasks until the operator reinstates it.</div>` : ""); }
+let off = 0; const lim = 50;
+$("#prev").onclick = () => { off = Math.max(0, off - lim); load(); }; $("#next").onclick = () => { off += lim; load(); }; $("#only").onchange = () => { off = 0; load(); };
+async function load() { const d = await api(`/api/transactions?offset=${off}&limit=${lim}&only=${$("#only").value}`);
+  $("#pos").textContent = `${d.total ? off + 1 : 0}–${Math.min(off + lim, d.total)} of ${d.total.toLocaleString()} · scored up to #${d.stream_position}`;
+  $("#rows").innerHTML = d.rows.map(r => { const s = r.score, c = s == null ? "muted" : s >= 0.5 ? "bad" : s >= 0.2 ? "warn" : "ok";
+    return `<tr><td class="muted">${r.i}</td><td>${esc(r.time)}</td><td class="mono">${esc(r.from_account)}</td><td class="mono">${esc(r.to_account)}</td><td>${esc(r.to_bank)}</td>
+    <td>${r.amount.toLocaleString()}</td><td>${esc(r.currency)}</td><td>${esc(r.format)}</td><td class="${c}">${s == null ? "not yet scored" : s.toFixed(3)}</td></tr>`; }).join(""); }
+(async () => { await bankShell("Transactions"); load(); every(3000, async () => { const s = await api("/api/status"); bankPill(s); redBanner(s); }); setInterval(load, 5000); })();
+</script></body></html>

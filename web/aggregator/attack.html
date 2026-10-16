@@ -1,0 +1,47 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/app.css"><script src="/static/app.js"></script>
+<style>:root{--accent:#ff4d6d}</style></head><body>
+<main>
+  <h1 class="page">Attack lab · red-team console</h1>
+  <p class="lead">Simulate a compromised bank. The instruction travels to that bank's own node, which then misbehaves. Watch the defences
+  (signature checks, payload schema, anomaly detector, quarantine) catch it while the model keeps learning. Every exercise is declared in the ledger.</p>
+  <div class="grid g23">
+    <div class="panel"><h2>1 · Choose the attacking bank</h2><div class="row" id="banks"></div>
+      <h2 style="margin-top:16px">2 · Choose the scenario</h2><div class="cards" id="cards"></div>
+      <div class="row" style="margin-top:14px"><button class="solid danger" id="launch">⚡ Launch attack</button><button id="stopall">Stop all exercises</button></div>
+      <div class="muted" style="margin-top:8px" id="active"></div></div>
+    <div class="grid">
+      <div class="panel"><h2>Live effect on the global model</h2><div id="chart"></div></div>
+      <div class="panel"><h2>Detection timeline</h2><div class="feed scroll h320" id="timeline"></div></div>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:14px"><h2>Bank status</h2><table><thead><tr><th>Bank</th><th>Status</th><th>Red-team instruction</th><th>Flags</th><th>Reason</th><th></th></tr></thead><tbody id="bstat"></tbody></table></div>
+</main>
+<script>
+shell("aggregator", "Attack lab", "Aggregator · red team");
+let bank = null, kind = "label_flip", CAT = {};
+const pick = (b) => { bank = b; draw(); }, pickk = (k) => { kind = k; draw(); };
+let O = null;
+function draw() {
+  if (!O) return;
+  $("#banks").innerHTML = O.banks.map(b => `<button class="${bank === b.id ? "solid danger" : ""}" onclick="pick('${b.id}')">Bank ${esc(b.id)} · ${esc(b.city || "")}</button>`).join("") || '<span class="muted">no bank registered</span>';
+  $("#cards").innerHTML = Object.entries(CAT).map(([k, d]) => `<div class="card ${k === kind ? "on" : ""}" onclick="pickk('${k}')"><b>${esc(d.split(":")[0])}</b><span class="muted">${esc(d.split(":").slice(1).join(":"))}</span></div>`).join("");
+}
+$("#launch").onclick = async () => { if (!bank) return toast("Choose a bank first"); try { await post("/api/attack/launch", { bank, type: kind }); toast(`Bank ${esc(bank)} is now malicious: ${esc(CAT[kind])}`); } catch (e) { toast(`<span class="bad">${esc(e.message)}</span>`); } };
+$("#stopall").onclick = async () => { try { await post("/api/attack/stop", {}); toast("All red-team exercises stopped"); } catch (e) { toast(esc(e.message)); } };
+async function reinstate(b) { try { await post("/api/registry/action", { bank: b, action: "reinstate" }); toast(`Bank ${b} reinstated`); } catch (e) { toast(esc(e.message)); } }
+(async () => { CAT = (await api("/api/attack")).catalogue; })();
+every(1500, async () => {
+  O = await api("/api/overview"); draw();
+  const run = O.run, atk = Object.entries(O.red_team);
+  pill(atk.length ? `RED TEAM ACTIVE · ${atk.map(([b, a]) => b + ":" + a.type).join(", ")}` : `${run.status} · round ${run.round}/${run.rounds}`, atk.length ? "bad" : "live");
+  $("#active").innerHTML = atk.map(([b, a]) => `Bank ${esc(b)} runs <b class="bad">${esc(a.type)}</b> since round ${a.since_round}`).join("<br>") || "No active exercise.";
+  lineChart($("#chart"), [{ name: "federated PR-AUC", color: "#2ee6a6", fill: true, points: O.metrics.map(m => [m.round, m.pr_auc]) }],
+    { ymin: 0, ymax: 1, xmin: 1, xmax: Math.max(run.rounds || 2, 2), xlabel: "round",
+      bands: atk.map(([b, a]) => ({ from: Math.max(1, a.since_round), to: run.rounds || a.since_round + 1, color: "#ff4d6d", label: "attack window" })) });
+  $("#timeline").innerHTML = O.events.filter(e => /attack|flag|quarantine|leakage|signature|access|declined/.test(e.type))
+    .map(e => `<div class="${e.severity}">r${e.round} · ${clock(e.ts)} · ${esc(e.msg)}</div>`).join("") || '<div class="muted">nothing detected yet</div>';
+  $("#bstat").innerHTML = O.banks.map(b => `<tr><td>Bank ${esc(b.id)} · ${esc(b.city || "")}</td><td>${badge(b.status)}</td><td class="${b.red_team ? "bad" : "muted"}">${esc(b.red_team || "none")}</td>
+    <td>${b.flags || 0}</td><td class="muted">${esc(b.reason || "")}</td><td>${b.status === "quarantined" ? `<button class="small" onclick="reinstate('${b.id}')">Reinstate</button>` : ""}</td></tr>`).join("");
+});
+</script></body></html>

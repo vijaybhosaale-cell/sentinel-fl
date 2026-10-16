@@ -1,0 +1,3 @@
+apiVersion: 1
+providers:
+  - { name: sentinel, folder: SENTINEL-FL, type: file, options: { path: /var/lib/grafana/dashboards } }

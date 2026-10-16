@@ -1,0 +1,35 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/app.css"><script src="/static/app.js"></script></head><body>
+<main>
+  <h1 class="page">Training rounds</h1>
+  <p class="lead">Each round, the aggregator sends the global model to the approved banks, receives one signed update per bank, scores every update and aggregates only the accepted ones.
+  Quality is measured by federated evaluation: each bank tests the model on its own data and only the scores are combined.</p>
+  <div class="grid g2">
+    <div class="panel"><h2>PR-AUC per round · consortium and per bank</h2><div id="chart"></div></div>
+    <div class="panel"><h2>Update anomaly scores (norm z-score) · threshold 3.5</h2><div id="zchart"></div></div>
+  </div>
+  <div class="panel" style="margin-top:14px"><h2>Round log <span class="right muted">click a round for its detail</span></h2><div class="scroll h420">
+    <table><thead><tr><th>Round</th><th>Participants</th><th>Aggregated</th><th>Excluded</th><th>Rejected</th><th>PR-AUC</th><th>Data in</th><th>Duration</th><th>Model hash</th><th>Merkle root</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+  <div class="panel" style="margin-top:14px"><h2>Round detail</h2><pre class="json" id="detail">select a round</pre></div>
+</main>
+<script>
+shell("aggregator", "Training", "Aggregator · consortium operator");
+const COLORS = { A: "#2ee6a6", B: "#a78bfa", C: "#ffb547", D: "#ff8fab", E: "#7dd3fc" };
+let R = [];
+function show(i) { $("#detail").textContent = JSON.stringify(R[i], null, 2); }
+every(2000, async () => {
+  const d = await api("/api/rounds"); R = d.rounds;
+  pill(`${d.run.run_id || "no run"} · round ${d.run.round}/${d.run.rounds}`, d.run.status === "running" ? "live" : "");
+  const banks = [...new Set(d.metrics.flatMap(m => Object.keys(m.per_bank || {})))].sort();
+  lineChart($("#chart"), [{ name: "consortium", color: "#3ee6ff", width: 3, points: d.metrics.map(m => [m.round, m.pr_auc]) },
+    ...banks.map(b => ({ name: "Bank " + b, color: COLORS[b], width: 1.4, dots: false, points: d.metrics.map(m => [m.round, m.per_bank?.[b] ?? null]) }))],
+    { ymin: 0, ymax: 1, xmin: 1, xmax: Math.max(d.run.rounds || 2, 2), xlabel: "round" });
+  const zb = [...new Set(R.flatMap(r => Object.keys(r.scores || {})))].sort();
+  lineChart($("#zchart"), zb.map(b => ({ name: "Bank " + b, color: COLORS[b], points: R.map(r => [r.round, r.scores?.[b] ? Math.min(r.scores[b].norm_z, 20) : null]) })),
+    { ymin: 0, ymax: 20, yd: 0, xmin: 1, xmax: Math.max(d.run.rounds || 2, 2), refs: [{ y: 3.5, label: "exclusion threshold", color: "#ff4d6d" }], xlabel: "round (z capped at 20)" });
+  const mm = Object.fromEntries(d.metrics.map(m => [m.round, m.pr_auc]));
+  $("#rows").innerHTML = R.map((r, i) => `<tr class="click" onclick="show(${i})"><td>${r.round}</td><td>${r.participants.join(", ")}</td><td class="ok">${r.used.join(", ")}</td>
+    <td class="bad">${r.excluded.join(", ")}</td><td class="bad">${r.rejected.join(", ")}</td><td>${fmt(mm[r.round])}</td><td>${(r.bytes_in / 1024).toFixed(1)} KB</td><td>${r.seconds}s</td>
+    <td class="mono">${r.model_hash.slice(0, 12)}…</td><td class="mono">${r.merkle_root.slice(0, 12)}…</td></tr>`).reverse().join("") || '<tr><td colspan="10" class="muted">no round yet</td></tr>';
+});
+</script></body></html>

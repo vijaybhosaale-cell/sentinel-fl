@@ -11,3 +11,6 @@ data/*.zip
 .DS_Store
 .idea/
 .vscode/
+nodes/
+.env
+.env.bank

@@ -171,5 +171,6 @@ def partition(df: pd.DataFrame, n_banks: int, splits=(0.6, 0.2, 0.2)) -> list[di
         a, b = int(n * splits[0]), int(n * (splits[0] + splits[1]))
         info = MEMBERS[m]
         banks.append({**info, "X_train": X[:a], "y_train": y[:a], "X_val": X[a:b], "y_val": y[a:b],
-                      "X_test": X[b:], "y_test": y[b:], "n": n, "illicit_rate": float(y.mean()) if n else 0.0})
+                      "X_test": X[b:], "y_test": y[b:], "n": n, "illicit_rate": float(y.mean()) if n else 0.0,
+                      "df_test": part.iloc[b:].reset_index(drop=True), "n_train_rows": a})
     return banks

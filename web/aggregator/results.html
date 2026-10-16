@@ -1,0 +1,27 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/app.css"><script src="/static/app.js"></script></head><body>
+<main>
+  <h1 class="page">Results</h1>
+  <p class="lead">Live results of the current consortium run, and the offline experiment matrix (E1–E10) produced with <span class="mono">python -m sentinel matrix</span>
+  on the aggregator laptop. The matrix answers the brief's test scenarios: poisoning, privacy budget, leakage, audit, and comparison with a centralised baseline.</p>
+  <div class="grid g2">
+    <div class="panel"><h2>Live run · PR-AUC per round</h2><div id="live"></div><p class="muted" id="liveinfo"></p></div>
+    <div class="panel"><h2>Experiment matrix · final PR-AUC</h2><div id="bars"></div></div>
+  </div>
+  <div class="panel" style="margin-top:14px"><h2>Experiment matrix (synthetic data)</h2><div class="scroll"><table><thead><tr><th>ID</th><th>Experiment</th><th>PR-AUC</th><th>F1</th><th>Recall @1% FPR</th><th>ε max</th><th>Backdoor success</th><th>Attacker caught</th></tr></thead><tbody id="mx"></tbody></table></div></div>
+</main>
+<script>
+shell("aggregator", "Results", "Aggregator · evaluation");
+every(4000, async () => {
+  const r = await api("/api/results"); const base = r.baselines?.centralized?.pr_auc;
+  pill(r.live.run.run_id || "no live run", r.live.run.status === "running" ? "live" : "");
+  lineChart($("#live"), [{ name: "federated PR-AUC", color: "#3ee6ff", fill: true, points: r.live.metrics.map(m => [m.round, m.pr_auc]) }],
+    { ymin: 0, ymax: 1, xmin: 1, xmax: Math.max(r.live.run.rounds || 2, 2), refs: base ? [{ y: base, label: `centralised baseline ${base}` }] : [], xlabel: "round" });
+  const last = r.live.metrics.at(-1);
+  $("#liveinfo").textContent = last ? `Latest: PR-AUC ${last.pr_auc}, F1 ${last.f1}, recall at 1% FPR ${last.recall_at_1pct_fpr}` : "Start a run in the control room.";
+  if (!r.matrix) { $("#mx").innerHTML = '<tr><td colspan="8" class="muted">No matrix yet. Run: python -m sentinel matrix (about 4 minutes)</td></tr>'; $("#bars").innerHTML = '<span class="muted">no matrix yet</span>'; return; }
+  $("#mx").innerHTML = r.matrix.map(x => `<tr><td>${esc(x.id)}</td><td>${esc(x.name)}</td><td>${fmt(x.pr_auc)}</td><td>${fmt(x.f1)}</td><td>${fmt(x.recall_at_1pct_fpr)}</td>
+    <td>${x.eps_max ? fmt(x.eps_max, 2) : "–"}</td><td>${x.backdoor_success ?? "–"}</td><td class="${/not/.test(x.caught) ? "warn" : "ok"}">${typeof x.caught === "string" ? esc(x.caught) : "–"}</td></tr>`).join("");
+  barChart($("#bars"), r.matrix.map(x => ({ label: x.id, value: x.pr_auc, text: fmt(x.pr_auc), color: x.pr_auc < 0.3 ? "#ff4d6d" : x.id.startsWith("E4") ? "#a78bfa" : "#2ee6a6" })), { max: 1, labelWidth: 50 });
+});
+</script></body></html>

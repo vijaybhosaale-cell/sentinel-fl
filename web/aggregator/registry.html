@@ -1,0 +1,44 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/app.css"><script src="/static/app.js"></script></head><body>
+<main>
+  <h1 class="page">Participant registry & access control</h1>
+  <p class="lead">A bank joins with a request signed by its own Ed25519 key. Only the operator can approve or revoke a bank, and every decision is written to the audit ledger.
+  These rules act as the consortium's access contract. Version 2 anchors the same rules in a smart contract.</p>
+  <div class="grid g4">
+    <div class="panel kpi"><div class="v" id="k-all">–</div><div class="l">registered banks</div></div>
+    <div class="panel kpi green"><div class="v" id="k-ok">–</div><div class="l">approved</div></div>
+    <div class="panel kpi amber"><div class="v" id="k-pend">–</div><div class="l">waiting for approval</div></div>
+    <div class="panel kpi red"><div class="v" id="k-bad">–</div><div class="l">revoked or quarantined</div></div>
+  </div>
+  <div class="panel" style="margin-top:14px"><h2>Participants</h2><div class="scroll">
+    <table><thead><tr><th>Bank</th><th>Jurisdiction</th><th>Public key (Ed25519)</th><th>Training rows</th><th>Access</th><th>Status</th><th>Last seen</th><th>Reason</th><th>Operator actions</th></tr></thead>
+    <tbody id="rows"></tbody></table></div></div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="panel"><h2>Access rules enforced by the aggregator</h2><ol class="muted" style="margin:0;padding-left:18px;line-height:1.8">
+      <li>A registration must be signed by the key it declares, which proves the bank owns that key.</li>
+      <li>A bank ID can never be re-registered with a different key, which blocks impersonation.</li>
+      <li>Pending, revoked or quarantined banks receive no model and their updates are refused.</li>
+      <li>Every accepted update must carry a valid signature from the registered key.</li>
+      <li>Two anomalous rounds, any exfiltration attempt or a forged update lead to automatic quarantine.</li>
+      <li>Only the operator can reinstate a bank, and that decision is logged.</li></ol></div>
+    <div class="panel"><h2>Access decisions in the ledger</h2><div class="scroll h320"><table><thead><tr><th>#</th><th>Type</th><th>Bank</th><th>Detail</th></tr></thead><tbody id="led"></tbody></table></div></div>
+  </div>
+</main>
+<script>
+shell("aggregator", "Registry", "Aggregator · consortium operator");
+async function act(b, a) { try { await post("/api/registry/action", { bank: b, action: a }); toast(`Bank ${esc(b)}: ${a} recorded in the ledger`); } catch (e) { toast(`<span class="bad">${esc(e.message)}</span>`); } }
+every(2000, async () => {
+  const rg = await api("/api/registry"); pill(`${rg.length} banks registered`, "live");
+  $("#k-all").textContent = rg.length; $("#k-ok").textContent = rg.filter(r => r.status === "approved" && !r.quarantined).length;
+  $("#k-pend").textContent = rg.filter(r => r.status === "pending").length; $("#k-bad").textContent = rg.filter(r => r.status === "revoked" || r.quarantined).length;
+  $("#rows").innerHTML = rg.map(r => `<tr><td><b>${esc(r.name)}</b><div class="muted">${esc(r.city || "")}</div></td><td>${esc(r.country)}</td>
+    <td class="mono">${esc(r.public_key.slice(0, 20))}…</td><td>${(r.n_train || 0).toLocaleString()}</td><td>${badge(r.status)}</td><td>${badge(r.view.status)}</td>
+    <td>${r.view.online ? '<span class="ok">online</span>' : '<span class="muted">' + ago(r.last_seen) + "</span>"}</td><td class="muted" style="max-width:260px">${esc(r.reason || "")}</td>
+    <td style="white-space:nowrap">${r.status !== "approved" ? `<button class="small" onclick="act('${r.id}','approve')">Approve</button>` : ""}
+      ${r.status === "approved" ? `<button class="small danger" onclick="act('${r.id}','revoke')">Revoke</button>` : ""}
+      ${r.quarantined ? `<button class="small" onclick="act('${r.id}','reinstate')">Reinstate</button>` : ""}</td></tr>`).join("")
+    || '<tr><td colspan="9" class="muted">No bank yet. Start a bank node: python -m sentinel bank --id A --aggregator http://&lt;this-laptop-IP&gt;:8000</td></tr>';
+  const led = (await api("/api/ledger?limit=400")).filter(e => /register|access|quarantine/.test(e.type));
+  $("#led").innerHTML = led.slice(0, 60).map(e => `<tr><td>${e.idx}</td><td>${badge(e.type.includes("denied") || e.type.includes("revoked") || e.type === "quarantine" ? "high" : "info", e.type)}</td><td>${esc(e.body.bank)}</td><td class="muted">${esc(e.body.reason || e.body.jurisdiction || e.body.by || "")}</td></tr>`).join("");
+});
+</script></body></html>

@@ -1,0 +1,42 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/app.css"><script src="/static/app.js"></script>
+<style>:root{--accent:#ffb547}</style></head><body>
+<main>
+  <h1 class="page">Alerts & e-mail notifications</h1>
+  <p class="lead">Banks score their live transactions with the consortium model and report only <b>aggregate counts and patterns</b> here. Case details stay inside each bank,
+  which respects the AML tipping-off rule and GDPR minimisation. Serious events also trigger an e-mail: quarantine, an exfiltration attempt, a forged update,
+  a ledger integrity failure, or a bank reporting 3 or more high-risk transactions in a round.</p>
+  <div class="grid g4">
+    <div class="panel kpi amber"><div class="v" id="k-h">–</div><div class="l">high-risk transactions reported</div></div>
+    <div class="panel kpi"><div class="v" id="k-m">–</div><div class="l">medium-risk transactions reported</div></div>
+    <div class="panel kpi red"><div class="v" id="k-s">–</div><div class="l">critical system alerts</div></div>
+    <div class="panel kpi violet"><div class="v" id="k-e">–</div><div class="l">e-mails sent / queued</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="panel"><h2>Bank alert reports (counts only)</h2><div class="scroll h420"><table><thead><tr><th>Bank</th><th>Round</th><th>Scored</th><th>High</th><th>Medium</th><th>Patterns</th></tr></thead><tbody id="ba"></tbody></table></div></div>
+    <div class="grid">
+      <div class="panel"><h2>Laundering patterns seen across the consortium</h2><div id="pat"></div></div>
+      <div class="panel"><h2>System alerts</h2><div class="feed scroll h220" id="sys"></div></div>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:14px"><h2>E-mail notifications <span class="right"><span id="smtp" class="muted"></span> <button class="small" id="test">Send test e-mail</button></span></h2>
+    <div class="scroll h320"><table><thead><tr><th>Time</th><th>Severity</th><th>Subject</th><th>To</th><th>Delivery</th></tr></thead><tbody id="mail"></tbody></table></div></div>
+</main>
+<script>
+shell("aggregator", "Alerts", "Aggregator · alerts");
+$("#test").onclick = async () => { try { const r = await post("/api/notify/test"); toast(`Test e-mail: ${esc(r.status)}`); } catch (e) { toast(`<span class="bad">${esc(e.message)}</span>`); } };
+every(2500, async () => {
+  const a = await api("/api/alerts");
+  pill(a.smtp_configured ? "e-mail: SMTP configured" : "e-mail: outbox mode (SMTP not configured)", a.smtp_configured ? "live" : "");
+  $("#smtp").textContent = a.smtp_configured ? "SMTP configured: real e-mails are sent" : "SMTP not configured: e-mails are saved in nodes/aggregator/outbox/";
+  $("#k-h").textContent = a.bank_alerts.reduce((s, x) => s + (x.high || 0), 0); $("#k-m").textContent = a.bank_alerts.reduce((s, x) => s + (x.medium || 0), 0);
+  $("#k-s").textContent = a.system.filter(e => e.severity === "critical").length; $("#k-e").textContent = a.notifications.length;
+  $("#ba").innerHTML = a.bank_alerts.filter(x => x.alerts).map(x => `<tr><td>Bank ${esc(x.bank)}</td><td>${x.round}</td><td>${x.scored}</td><td class="${x.high ? "bad" : ""}">${x.high}</td><td class="${x.medium ? "warn" : ""}">${x.medium}</td>
+    <td class="muted">${Object.entries(x.patterns || {}).map(([k, v]) => `${esc(k)} ×${v}`).join(", ")}</td></tr>`).join("") || '<tr><td colspan="6" class="muted">no alert yet: alerts start from round 2</td></tr>';
+  const pc = {}; a.bank_alerts.forEach(x => Object.entries(x.patterns || {}).forEach(([k, v]) => pc[k] = (pc[k] || 0) + v));
+  barChart($("#pat"), Object.entries(pc).sort((x, y) => y[1] - x[1]).map(([k, v]) => ({ label: k, value: v, color: "#ffb547" })), { labelWidth: 140 });
+  if (!Object.keys(pc).length) $("#pat").innerHTML = '<span class="muted">no pattern yet</span>';
+  $("#sys").innerHTML = a.system.map(e => `<div class="${e.severity}">${clock(e.ts)} · ${esc(e.msg)}</div>`).join("") || '<div class="muted">no system alert</div>';
+  $("#mail").innerHTML = a.notifications.map(n => `<tr><td>${clock(n.ts)}</td><td>${badge(n.severity)}</td><td>${esc(n.subject)}</td><td class="muted">${esc(n.to)}</td><td class="${/FAILED/.test(n.status) ? "bad" : "muted"}">${esc(n.status)}</td></tr>`).join("") || '<tr><td colspan="5" class="muted">no e-mail yet</td></tr>';
+});
+</script></body></html>

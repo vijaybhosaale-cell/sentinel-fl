@@ -1,0 +1,65 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/app.css"><script src="/static/app.js"></script></head><body>
+<main>
+  <h1 class="page">Control room</h1>
+  <p class="lead">Live view of the consortium. Banks train on their own machines and send only signed, privacy-protected model updates here.</p>
+  <div class="grid g6">
+    <div class="panel kpi"><div class="v" id="k-run">–</div><div class="l">run status</div></div>
+    <div class="panel kpi"><div class="v" id="k-round">–</div><div class="l">training round</div></div>
+    <div class="panel kpi green"><div class="v" id="k-auc">–</div><div class="l">federated PR-AUC (illicit class)</div></div>
+    <div class="panel kpi"><div class="v" id="k-banks">–</div><div class="l">banks online / approved</div></div>
+    <div class="panel kpi red"><div class="v" id="k-q">–</div><div class="l">banks quarantined</div></div>
+    <div class="panel kpi amber"><div class="v" id="k-al">–</div><div class="l">high-risk alerts reported</div></div>
+  </div>
+  <div class="grid g32" style="margin-top:14px">
+    <div class="panel"><h2>Consortium map · live update flows <span class="right muted" id="mapnote"></span></h2><div id="map"></div></div>
+    <div class="grid">
+      <div class="panel"><h2>Start a training run</h2>
+        <div class="row">
+          <label class="f">Rounds<input id="rounds" type="number" value="15" min="1" max="100" style="width:80px"></label>
+          <label class="f">Aggregation<select id="rule"><option value="trimmed_mean">trimmed mean</option><option value="median">median</option><option value="multi_krum">Multi-Krum</option><option value="fedavg">FedAvg</option></select></label>
+          <label class="f">Defences<select id="def"><option value="1">on (detector + quarantine)</option><option value="0">off</option></select></label>
+          <label class="f">Differential privacy<select id="dp"><option value="0">off</option><option value="1">on</option></select></label>
+          <label class="f">Noise σ<input id="noise" type="number" value="1.0" step="0.1" style="width:70px"></label>
+          <label class="f">Seconds between rounds<input id="delay" type="number" value="2" step="0.5" style="width:80px"></label>
+        </div>
+        <div class="row" style="margin-top:10px"><button class="solid" id="go">▶ Start run</button><button class="danger" id="stop">■ Stop</button>
+          <span class="muted" id="runinfo"></span></div></div>
+      <div class="panel"><h2>Current round · who has answered</h2><div id="progress" class="muted">no run yet</div></div>
+      <div class="panel"><h2>Last round · update checks <span class="right muted" style="font-size:11px">detector needs ≥ 3 updates</span></h2><div class="scroll h220"><table><thead><tr><th>Bank</th><th>norm z</th><th>cosine</th><th>Decision</th></tr></thead><tbody id="checks"></tbody></table></div></div>
+    </div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="panel"><h2>Global model quality (federated evaluation)</h2><div id="chart"></div></div>
+    <div class="panel"><h2>Event feed</h2><div class="feed scroll h320" id="feed"></div></div>
+  </div>
+</main>
+<script>
+shell("aggregator", "Control room", "Aggregator · consortium operator");
+$("#go").onclick = async () => { try { const r = await post("/api/control/start", { rounds: +$("#rounds").value, rule: $("#rule").value,
+  defense: $("#def").value === "1", dp: $("#dp").value === "1", noise: +$("#noise").value, round_delay: +$("#delay").value });
+  toast(`Run <b>${esc(r.run_id)}</b> started`); } catch (e) { toast(`<span class="bad">${esc(e.message)}</span>`); } };
+$("#stop").onclick = async () => { try { await post("/api/control/stop"); toast("Stopping after the current round"); } catch (e) { toast(esc(e.message)); } };
+every(1500, async () => {
+  const o = await api("/api/overview"), run = o.run, last = o.metrics.at(-1);
+  pill(`${run.run_id || "no run"} · ${run.status}`, run.status === "running" ? "live" : "");
+  $("#k-run").textContent = run.status; $("#k-round").textContent = run.rounds ? `${run.round}/${run.rounds}` : "–";
+  $("#k-auc").textContent = last ? last.pr_auc.toFixed(3) : "–";
+  $("#k-banks").textContent = `${o.banks.filter(b => b.online).length} / ${o.banks.filter(b => b.access === "approved").length}`;
+  $("#k-q").textContent = o.banks.filter(b => b.status === "quarantined").length; $("#k-al").textContent = o.alerts_high;
+  $("#runinfo").textContent = run.policy ? `${run.policy.rule} · defences ${run.policy.defense ? "on" : "off"} · DP ${run.policy.dp.enabled ? "on σ=" + run.policy.dp.noise_multiplier : "off"}` : "";
+  euMap($("#map"), o.aggregator, o.banks, { height: 400 });
+  $("#mapnote").textContent = `${o.banks.length} registered banks · ${o.ledger_records} ledger records`;
+  const pr = Object.entries(o.round_progress);
+  $("#progress").innerHTML = pr.length ? pr.map(([b, s]) => `<div style="padding:3px 0">Bank ${esc(b)} ${badge(s)}</div>`).join("") : "no open round";
+  const lr = o.last_round;
+  $("#checks").innerHTML = lr ? lr.received.map(b => { const s = lr.scores[b] || {}; const ex = lr.excluded.includes(b);
+    return `<tr><td>Bank ${esc(b)}</td><td>${fmt(s.norm_z, 2)}</td><td>${fmt(s.cosine_to_median, 2)}</td><td>${ex ? badge("excluded") : badge("accepted")}</td></tr>`; }).join("")
+    + lr.rejected.map(b => `<tr><td>Bank ${esc(b)}</td><td>–</td><td>–</td><td>${badge("rejected", "rejected (protocol)")}</td></tr>`).join("") : "";
+  const atk = Object.entries(o.red_team);
+  lineChart($("#chart"), [{ name: "federated PR-AUC", color: "#3ee6ff", fill: true, points: o.metrics.map(m => [m.round, m.pr_auc]) }],
+    { ymin: 0, ymax: 1, xmin: 1, xmax: Math.max(run.rounds || 1, 2), xlabel: "round",
+      bands: atk.map(([b, a]) => ({ from: Math.max(1, a.since_round), to: run.rounds || a.since_round + 1, color: "#ff4d6d", label: `red team: Bank ${b} · ${a.type}` })) });
+  $("#feed").innerHTML = o.events.map(e => `<div class="${e.severity}">${clock(e.ts)} · ${esc(e.msg)}</div>`).join("") || '<div class="muted">waiting for events</div>';
+});
+</script></body></html>

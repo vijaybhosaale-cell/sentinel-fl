@@ -135,7 +135,7 @@ def ask(question: str, run_dir: str | Path, use_llm: bool | None = None) -> dict
             return _ask_llm(question, tools)
         except Exception as e:  # Ollama not running or model missing -> deterministic mode
             out = _ask_rules(question, tools)
-            out["mode"] = f"offline (LLM unavailable: {type(e).__name__})"
+            out["mode"] = "offline mode (local LLM not running)"
             return out
     return _ask_rules(question, tools)
 

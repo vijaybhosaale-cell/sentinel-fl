@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/app.css"><script src="/static/app.js"></script><style>:root{--accent:#2ee6a6}</style></head><body>
+<main><div id="rt"></div>
+  <h1 class="page">Privacy budget</h1>
+  <p class="lead">With differential privacy on, every gradient step is clipped and noised (DP-SGD). The Rényi-DP accountant converts the noise level, sampling rate and number of steps into ε.
+  A smaller ε means stronger privacy. The consortium sets a cap, and this node stops training once its next round would exceed the cap.</p>
+  <div class="grid g3">
+    <div class="panel"><h2>Budget used</h2><div style="font-size:40px;font-weight:800;color:#a78bfa" id="eps">–</div><div class="bar" style="margin:8px 0"><i id="epsbar" style="width:0"></i></div><div class="muted" id="cap"></div></div>
+    <div class="panel"><h2>DP-SGD settings (set by the consortium)</h2><table id="dp"></table></div>
+    <div class="panel"><h2>What ε means here</h2><p class="muted" style="margin:0">ε bounds how much the shared model can reveal about any single transaction of this bank.
+      With ε = 3 and δ = 10⁻⁵, adding or removing one transaction changes the probability of any training outcome by a factor of at most e³ ≈ 20, except with a probability of 10⁻⁵.</p></div>
+  </div>
+  <div class="panel" style="margin-top:14px"><h2>Cumulative ε per round</h2><div id="chart"></div></div>
+</main>
+<script>
+async function bankShell(page) { const s = await api("/api/status"); shell("bank", `${s.bank.name} · ${page}`, `${s.bank.name} portal · ${s.bank.city}, ${s.bank.country}`); return s; }
+function bankPill(s) { const st = s.agg_status; pill(`${s.bank.name} · ${s.connected ? "aggregator " + st : "aggregator unreachable"} · round ${s.round}`, !s.connected || st === "quarantined" || st === "revoked" ? "bad" : st === "approved" ? "live" : ""); }
+function redBanner(s) { const el = $("#rt"); if (!el) return; el.innerHTML = s.red_team ? `<div class="banner red">⚠ RED-TEAM EXERCISE: this node has been instructed to behave maliciously (${esc(s.red_team.type)}). The consortium is expected to detect it.</div>` : (s.agg_status === "quarantined" ? `<div class="banner red">⛔ This bank is QUARANTINED by the consortium. It receives no training tasks until the operator reinstates it.</div>` : ""); }
+(async () => { await bankShell("Privacy budget"); every(2000, async () => { const s = await api("/api/status"); bankPill(s); redBanner(s);
+  const cap = s.dp.epsilon_cap, e = s.eps_total; $("#eps").textContent = s.dp.enabled ? e.toFixed(3) : "DP off";
+  $("#epsbar").style.width = Math.min(100, 100 * e / cap) + "%"; $("#cap").textContent = `cap ε = ${cap} · δ = ${s.dp.delta}`;
+  $("#dp").innerHTML = [["DP-SGD", s.dp.enabled ? '<span class="ok">enabled</span>' : '<span class="warn">disabled</span>'], ["Noise multiplier σ", s.dp.noise_multiplier], ["Clipping norm C", s.dp.clip],
+    ["Sampling", "Poisson, q = batch / local rows"], ["Accountant", "Rényi DP, integer orders 2–256 (conservative)"]].map(([k, v]) => `<tr><td class="muted">${k}</td><td>${v}</td></tr>`).join("");
+  const h = await api("/api/training");
+  lineChart($("#chart"), [{ name: "cumulative ε", color: "#a78bfa", fill: true, points: h.filter(x => !x.eval_only).map(x => [x.round, x.eps_total]) }],
+    { ymin: 0, ymax: Math.max(cap * 1.1, 1), yd: 1, xmin: 1, refs: [{ y: cap, label: "consortium cap", color: "#ff4d6d" }], xlabel: "round" });
+}); })();
+</script></body></html>

@@ -1,0 +1,42 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/app.css"><script src="/static/app.js"></script><style>:root{--accent:#2ee6a6}</style></head><body>
+<main><div id="rt"></div>
+  <h1 class="page" id="title">Bank overview</h1>
+  <p class="lead">This portal runs on the bank's own machine. Transactions and customer data stay here. The node only sends signed, privacy-protected model updates and alert counts to the consortium aggregator.</p>
+  <div class="grid g6">
+    <div class="panel kpi green"><div class="v" id="k-tx">–</div><div class="l">local training transactions</div></div>
+    <div class="panel kpi"><div class="v" id="k-ill">–</div><div class="l">illicit labels (local)</div></div>
+    <div class="panel kpi"><div class="v" id="k-acc">–</div><div class="l">consortium access</div></div>
+    <div class="panel kpi"><div class="v" id="k-round">–</div><div class="l">rounds completed</div></div>
+    <div class="panel kpi violet"><div class="v" id="k-eps">–</div><div class="l">privacy budget spent (ε)</div></div>
+    <div class="panel kpi amber"><div class="v" id="k-al">–</div><div class="l">alerts (high-risk)</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="panel"><h2>Connection to the consortium</h2><table id="conn"></table></div>
+    <div class="panel"><h2>Last round</h2><table id="last"></table></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="panel"><h2>Local PR-AUC of the consortium model</h2><div id="chart"></div></div>
+    <div class="panel"><h2>Latest alerts <span class="right"><a href="/alerts">all alerts →</a></span></h2><div class="scroll h320"><table><thead><tr><th>Time</th><th>From → to</th><th>Amount</th><th>Score</th><th>Severity</th></tr></thead><tbody id="al"></tbody></table></div></div>
+  </div>
+</main>
+<script>
+async function bankShell(page) { const s = await api("/api/status"); shell("bank", `${s.bank.name} · ${page}`, `${s.bank.name} portal · ${s.bank.city}, ${s.bank.country}`); return s; }
+function bankPill(s) { const st = s.agg_status; pill(`${s.bank.name} · ${s.connected ? "aggregator " + st : "aggregator unreachable"} · round ${s.round}`, !s.connected || st === "quarantined" || st === "revoked" ? "bad" : st === "approved" ? "live" : ""); }
+function redBanner(s) { const el = $("#rt"); if (!el) return; el.innerHTML = s.red_team ? `<div class="banner red">⚠ RED-TEAM EXERCISE: this node has been instructed to behave maliciously (${esc(s.red_team.type)}). The consortium is expected to detect it.</div>` : (s.agg_status === "quarantined" ? `<div class="banner red">⛔ This bank is QUARANTINED by the consortium. It receives no training tasks until the operator reinstates it.</div>` : ""); }
+(async () => { await bankShell("Overview");
+every(1500, async () => { const s = await api("/api/status"); bankPill(s); redBanner(s);
+  $("#title").textContent = `${s.bank.name} · ${s.bank.city}, ${s.bank.country}`;
+  $("#k-tx").textContent = s.n_train.toLocaleString(); $("#k-ill").textContent = `${s.illicit_train} (${(s.illicit_rate * 100).toFixed(2)}%)`;
+  $("#k-acc").innerHTML = badge(s.connected ? s.agg_status : "unreachable"); $("#k-round").textContent = s.rounds_done; $("#k-eps").textContent = s.dp.enabled ? fmt(s.eps_total, 2) : "DP off";
+  $("#k-al").textContent = `${s.alerts_total} (${s.alerts_high})`;
+  $("#conn").innerHTML = [["Aggregator", s.aggregator], ["Status", badge(s.connected ? s.agg_status : "unreachable")], ["Last contact", ago(s.last_seen)], ["Run", s.run_id || "–"],
+    ["Public key (Ed25519)", '<span class="mono">' + s.public_key.slice(0, 32) + "…</span>"], ["Alert e-mail", s.smtp ? "SMTP configured" : "outbox mode (SMTP not configured)"],
+    ["Last error", s.last_error ? '<span class="bad">' + esc(s.last_error) + "</span>" : '<span class="muted">none</span>']].map(([k, v]) => `<tr><td class="muted">${k}</td><td>${v}</td></tr>`).join("");
+  const L = s.last; $("#last").innerHTML = L ? [["Round", L.round], ["Local PR-AUC", fmt(L.pr_auc)], ["Update", esc(L.submitted)], ["Update hash", '<span class="mono">' + (L.update_hash || "–").slice(0, 24) + "…</span>"],
+    ["Bytes sent", (L.bytes_sent || 0).toLocaleString()], ["ε this round / total", `${fmt(L.eps_round, 3)} / ${fmt(L.eps_total, 3)}`], ["Training time", (L.train_seconds ?? "–") + " s"], ["Alerts", L.alerts ?? "–"]]
+    .map(([k, v]) => `<tr><td class="muted">${k}</td><td>${v}</td></tr>`).join("") : '<tr><td class="muted">waiting for the first round</td></tr>';
+  const h = await api("/api/training"); lineChart($("#chart"), [{ name: "local PR-AUC", color: "#2ee6a6", fill: true, points: h.filter(x => x.pr_auc != null).map(x => [x.round - 1, x.pr_auc]) }], { ymin: 0, ymax: 1, xmin: 1, xlabel: "model version" });
+  const a = await api("/api/alerts?limit=12"); $("#al").innerHTML = a.map(x => `<tr><td>${esc(x.time)}</td><td class="mono">${esc(x.from_account)} → ${esc(x.to_account)}</td><td>${x.amount.toLocaleString()} ${esc(x.currency)}</td><td>${x.score}</td><td>${badge(x.severity)}</td></tr>`).join("") || '<tr><td colspan="5" class="muted">no alert yet</td></tr>';
+}); })();
+</script></body></html>
