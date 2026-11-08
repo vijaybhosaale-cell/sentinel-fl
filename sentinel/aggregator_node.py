@@ -33,6 +33,7 @@ from .ledger import Ledger, merkle_root
 from .model import MLP
 from .net import ApiError, NodeServer
 from .notify import Notifier
+from .registry_chain import RegistryError, make_registry
 
 ATTACKS = {
     "label_flip": "A1 Label flipping: the bank trains on inverted labels",
@@ -55,6 +56,7 @@ class AggregatorNode:
         self.dir.mkdir(parents=True, exist_ok=True)
         self.operator = Identity("operator", self.dir / "keys")
         self.ledger = Ledger(self.dir / "ledger.db", self.operator)
+        self.chain = make_registry(self.dir, fresh=fresh)   # smart-contract registry (access control + anchoring)
         self.notifier = Notifier(self.dir, "Aggregator")
         tok_file = self.dir / "admin_token.txt"
         self.token = os.environ.get("SENTINEL_ADMIN_TOKEN") or (tok_file.read_text().strip() if tok_file.exists() else secrets.token_hex(4))
@@ -90,6 +92,14 @@ class AggregatorNode:
             del self.events[400:]
         with open(self.dir / "events.jsonl", "a") as f:
             f.write(json.dumps(e) + "\n")
+
+    def _chain(self, fn: str, *args) -> dict:
+        """Send a transaction to the registry contract; failures are logged, never fatal for the round."""
+        try:
+            return getattr(self.chain, fn)(*args)
+        except Exception as e:  # noqa: BLE001 - chain node down or require() refused
+            self.event("chain", f"Smart contract {fn} failed: {e}", args[0] if args else None, "high")
+            return {}
 
     def _save_registry(self):
         (self.dir / "registry.json").write_text(json.dumps(self.registry, indent=1))
@@ -138,11 +148,14 @@ class AggregatorNode:
                 self.registry[b] = {"id": b, **{k: body.get(k) for k in ("name", "country", "city", "lat", "lon", "public_key", "n_train")},
                                     "status": "approved" if self.auto_approve else "pending", "registered": time.time(),
                                     "last_seen": time.time(), "flags": 0, "quarantined": False, "eps": 0.0, "reason": ""}
+                tx = self._chain("request_join", b, body["public_key"], body["country"])
                 self.ledger.append("register_request", {"bank": b, "name": body["name"], "jurisdiction": body["country"],
-                                                        "public_key": body["public_key"], "n_train": body.get("n_train")})
+                                                        "public_key": body["public_key"], "n_train": body.get("n_train"),
+                                                        "chain_tx": tx.get("tx")})
                 self.event("access", f"Bank {b} ({body['country']}) requested to join the consortium", b)
                 if self.auto_approve:
-                    self.ledger.append("access_granted", {"bank": b, "by": "auto-approve"})
+                    tx = self._chain("approve", b)
+                    self.ledger.append("access_granted", {"bank": b, "by": "auto-approve", "chain_tx": tx.get("tx")})
             self.registry[b]["last_seen"] = time.time()
             self._save_registry(); self._write_state()
             return {"status": self.registry[b]["status"]}
@@ -152,15 +165,25 @@ class AggregatorNode:
             if b not in self.registry:
                 raise ApiError(404, "unknown bank")
             r = self.registry[b]
+            if action not in ("approve", "revoke", "reinstate"):
+                raise ApiError(400, "unknown action")
+            st = self.chain.status(b)
+            try:      # the smart contract decides; the local registry mirrors its state
+                if action == "approve":
+                    tx = self.chain.approve(b) if st != "approved" else {}
+                elif action == "revoke":
+                    tx = self.chain.revoke(b, "revoked by operator")
+                else:
+                    tx = self.chain.reinstate(b) if st == "quarantined" else (self.chain.approve(b) if st in ("pending", "revoked") else {})
+            except RegistryError as e:
+                raise ApiError(409, f"smart contract refused {action}: {e}")
             if action == "approve":
                 r["status"] = "approved"; kind = "access_granted"
             elif action == "revoke":
                 r["status"] = "revoked"; kind = "access_revoked"
-            elif action == "reinstate":
-                r.update(quarantined=False, flags=0, reason="", status="approved"); kind = "access_reinstated"
             else:
-                raise ApiError(400, "unknown action")
-            self.ledger.append(kind, {"bank": b, "by": "operator"}, self.run["round"] or None)
+                r.update(quarantined=False, flags=0, reason="", status="approved"); kind = "access_reinstated"
+            self.ledger.append(kind, {"bank": b, "by": "operator", "chain_tx": tx.get("tx")}, self.run["round"] or None)
             self.event("access", f"Operator {action}d Bank {b}", b, "high" if action == "revoke" else "info")
             self._save_registry(); self._write_state()
             return self._bank_view(b)
@@ -297,7 +320,10 @@ class AggregatorNode:
         self.ledger.append("round_commit", {"run_id": self.run["run_id"], "merkle_root": rec["merkle_root"], "model_hash": rec["model_hash"],
                                             "rule": pol["rule"] if pol["defense"] else "fedavg", "accepted": used,
                                             "excluded": excluded, "rejected": rec["rejected"]}, r)
-        self.event("round", f"Round {r}: aggregated {used}" + (f", excluded {excluded}" if excluded else ""))
+        tx = self._chain("anchor_round", self.run["run_id"], r, rec["merkle_root"], rec["model_hash"])
+        rec["anchor_tx"] = tx.get("tx")
+        self.event("round", f"Round {r}: aggregated {used}" + (f", excluded {excluded}" if excluded else "")
+                   + (f"; root anchored on-chain (block {tx['block']})" if tx.get("tx") else ""))
 
     def rounds_rejected(self, r: int) -> list[dict]:
         return [x for x in self._rejected if x["round"] == r and x["run_id"] == self.run["run_id"]]
@@ -308,7 +334,9 @@ class AggregatorNode:
             return
         reg["quarantined"] = True
         reg["reason"] = reason
-        self.ledger.append("quarantine", {"run_id": self.run["run_id"], "bank": b, "reason": reason, "flags": reg.get("flags", 0)}, r)
+        tx = self._chain("quarantine", b, reason)
+        self.ledger.append("quarantine", {"run_id": self.run["run_id"], "bank": b, "reason": reason, "flags": reg.get("flags", 0),
+                                          "chain_tx": tx.get("tx")}, r)
         self.event("quarantine", f"Bank {b} QUARANTINED: {reason}", b, "critical")
         self.notifier.send("critical", f"Bank {b} quarantined in round {r}",
                            f"The consortium aggregator quarantined Bank {b} ({reg.get('name')}, {reg.get('country')}).\n\n"
@@ -340,6 +368,9 @@ class AggregatorNode:
             if not reg or reg["status"] != "approved" or reg.get("quarantined"):
                 self.ledger.append("access_denied", {"bank": b, "reason": "update from a bank without access"})
                 raise ApiError(403, "bank is not an approved, active participant")
+            if not self.chain.is_authorised(b, reg["public_key"]):
+                self.ledger.append("access_denied", {"bank": b, "reason": "smart contract: bank/key not authorised"})
+                raise ApiError(403, "smart contract registry: this bank and key are not authorised")
             if not t or body.get("round") != t["round"] or body.get("run_id") != t["run_id"]:
                 raise ApiError(409, "no open round matches this update")
             reg["last_seen"] = time.time()
@@ -442,6 +473,10 @@ class AggregatorNode:
         @S.route("GET", "/api/registry")
         def _rg(q, body, h):
             return [self.registry[b] | {"view": self._bank_view(b)} for b in sorted(self.registry)]
+
+        @S.route("GET", "/api/chain")
+        def _chainv(q, body, h):
+            return self.chain.view()
 
         @S.route("POST", "/api/registry/action")
         def _rga(q, body, h):

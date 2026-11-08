@@ -1,5 +1,5 @@
 PY ?= python3
-.PHONY: cluster aggregator bank-a bank-b bank-c monitoring install test baselines run dp defended demo serve matrix verify docker
+.PHONY: flower flower-dp chain cluster aggregator bank-a bank-b bank-c monitoring install test baselines run dp defended demo serve matrix verify docker
 install:   ; $(PY) -m pip install -r requirements.txt
 test:      ; $(PY) -m unittest discover -s tests -v
 baselines: ; $(PY) -m sentinel baselines --config configs/fedavg.yaml
@@ -18,3 +18,6 @@ bank-a:     ; $(PY) -m sentinel bank --id A --aggregator $(AGG) --port 8101
 bank-b:     ; $(PY) -m sentinel bank --id B --aggregator $(AGG) --port 8102
 bank-c:     ; $(PY) -m sentinel bank --id C --aggregator $(AGG) --port 8103
 monitoring: ; docker compose --profile monitoring up --build
+flower:     ; $(PY) -m sentinel_flower.simulate --attack label_flip
+flower-dp:  ; $(PY) -m sentinel_flower.simulate --dp
+chain:      ; docker compose --profile chain up -d anvil && $(PY) scripts/deploy_contract.py

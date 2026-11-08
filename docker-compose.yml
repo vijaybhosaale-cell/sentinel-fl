@@ -4,6 +4,10 @@
 #   docker compose --profile monitoring up        -> + Prometheus :9090 and Grafana :3000 (admin / admin)
 #   docker compose --profile llm up               -> + Ollama for ARIA (then: docker compose exec ollama ollama pull llama3.1:8b)
 #   docker compose --profile v1 up trainer        -> the original single-process demo
+#   docker compose --profile flower run --rm flower-sim                 -> Flower + PyTorch + Opacus simulation (3 banks)
+#   docker compose --profile flower-deploy up -d superlink supernode-a supernode-b supernode-c
+#   docker compose --profile flower-deploy run --rm flwr-run           -> start a run on the SuperLink
+#   docker compose --profile chain up -d anvil    -> local Ethereum chain for the ConsortiumRegistry contract
 #
 # Operator token for the control room: "demo" (change SENTINEL_ADMIN_TOKEN below for real use).
 # For one bank per laptop use docker-compose.bank.yml on each teammate's laptop instead (docs/MULTI_LAPTOP_SETUP.md).
@@ -61,6 +65,45 @@ services:
     profiles: ["v1"]
     command: ["python", "-m", "sentinel", "demo", "--host", "0.0.0.0", "--port", "8080"]
     ports: ["8080:8080"]
+  # ---------------- Flower + PyTorch + Opacus engine
+  flower-sim:
+    build: { context: ., dockerfile: Dockerfile.flower }
+    profiles: ["flower"]
+    command: ["python", "-m", "sentinel_flower.simulate", "--attack", "label_flip"]
+    volumes: ["./runs:/app/runs", "./nodes:/app/nodes"]
+  superlink:
+    build: { context: ., dockerfile: Dockerfile.flower }
+    profiles: ["flower-deploy"]
+    command: ["flower-superlink", "--insecure"]
+    ports: ["9091:9091", "9092:9092", "9093:9093"]
+    volumes: ["./runs:/app/runs"]
+    networks: [consortium]
+  supernode-a: &supernode
+    build: { context: ., dockerfile: Dockerfile.flower }
+    profiles: ["flower-deploy"]
+    depends_on: [superlink]
+    command: ["flower-supernode", "--insecure", "--superlink", "superlink:9092", "--node-config", "partition-id=0 num-partitions=3"]
+    volumes: ["./nodes:/app/nodes"]
+    networks: [consortium]
+  supernode-b:
+    <<: *supernode
+    command: ["flower-supernode", "--insecure", "--superlink", "superlink:9092", "--node-config", "partition-id=1 num-partitions=3"]
+  supernode-c:
+    <<: *supernode
+    command: ["flower-supernode", "--insecure", "--superlink", "superlink:9092", "--node-config", "partition-id=2 num-partitions=3"]
+  flwr-run:
+    build: { context: ., dockerfile: Dockerfile.flower }
+    profiles: ["flower-deploy"]
+    depends_on: [superlink]
+    command: ["flwr", "run", ".", "docker", "--stream"]
+    networks: [consortium]
+  # ---------------- local Ethereum chain for contracts/ConsortiumRegistry.sol
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:latest
+    profiles: ["chain"]
+    entrypoint: ["anvil", "--host", "0.0.0.0"]
+    ports: ["8545:8545"]
+    networks: [consortium]
 networks:
   consortium: {}
 volumes:

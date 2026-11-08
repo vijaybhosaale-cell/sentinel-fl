@@ -70,6 +70,10 @@ class TestDistributed(unittest.TestCase):
         self.assertTrue({"register_request", "access_granted", "red_team_exercise", "quarantine", "round_commit"} <= types)
         notes = call(p, "GET", "/api/alerts")[1]["notifications"]
         self.assertTrue(any("quarantined" in n["subject"] for n in notes))
+        ch = call(p, "GET", "/api/chain")[1]
+        self.assertEqual(ch["banks"]["C"]["status"], "quarantined")      # decision recorded in the contract
+        self.assertGreaterEqual(ch["anchors"], 6)                        # every round root anchored
+        self.assertTrue(ch["verify"]["ok"])
         self.assertIn("sentinel_round", urllib.request.urlopen(f"http://127.0.0.1:{p}/metrics").read().decode())
 
 

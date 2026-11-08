@@ -3,7 +3,7 @@
 <main>
   <h1 class="page">Participant registry & access control</h1>
   <p class="lead">A bank joins with a request signed by its own Ed25519 key. Only the operator can approve or revoke a bank, and every decision is written to the audit ledger.
-  These rules act as the consortium's access contract. Version 2 anchors the same rules in a smart contract.</p>
+  The <b>ConsortiumRegistry smart contract</b> is the source of truth: the aggregator accepts an update only if the contract says the bank and its key are authorised, and it anchors every round's Merkle root on-chain.</p>
   <div class="grid g4">
     <div class="panel kpi"><div class="v" id="k-all">–</div><div class="l">registered banks</div></div>
     <div class="panel kpi green"><div class="v" id="k-ok">–</div><div class="l">approved</div></div>
@@ -20,8 +20,15 @@
       <li>Pending, revoked or quarantined banks receive no model and their updates are refused.</li>
       <li>Every accepted update must carry a valid signature from the registered key.</li>
       <li>Two anomalous rounds, any exfiltration attempt or a forged update lead to automatic quarantine.</li>
-      <li>Only the operator can reinstate a bank, and that decision is logged.</li></ol></div>
+      <li>Only the operator can reinstate a bank, and that decision is logged.</li>
+      <li>The regulator account can revoke or quarantine a bank directly on the contract, but cannot approve one.</li></ol></div>
     <div class="panel"><h2>Access decisions in the ledger</h2><div class="scroll h320"><table><thead><tr><th>#</th><th>Type</th><th>Bank</th><th>Detail</th></tr></thead><tbody id="led"></tbody></table></div></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="panel"><h2>Smart contract state <span class="right muted" id="c-meta"></span></h2><div class="scroll h320">
+      <table><thead><tr><th>Bank</th><th>Jurisdiction</th><th>Key on-chain (bytes32)</th><th>Contract status</th></tr></thead><tbody id="c-banks"></tbody></table></div></div>
+    <div class="panel"><h2>Contract transactions (newest first) <span class="right" id="c-verify"></span></h2><div class="scroll h320">
+      <table><thead><tr><th>Block</th><th>Function</th><th>From</th><th>Arguments</th><th>Tx hash</th></tr></thead><tbody id="c-tx"></tbody></table></div></div>
   </div>
 </main>
 <script>
@@ -38,6 +45,13 @@ every(2000, async () => {
       ${r.status === "approved" ? `<button class="small danger" onclick="act('${r.id}','revoke')">Revoke</button>` : ""}
       ${r.quarantined ? `<button class="small" onclick="act('${r.id}','reinstate')">Reinstate</button>` : ""}</td></tr>`).join("")
     || '<tr><td colspan="9" class="muted">No bank yet. Start a bank node: python -m sentinel bank --id A --aggregator http://&lt;this-laptop-IP&gt;:8000</td></tr>';
+  const ch = await api("/api/chain");
+  $("#c-meta").textContent = `${ch.backend} · ${ch.contract}` + (ch.anchors != null ? ` · ${ch.anchors} rounds anchored` : "");
+  $("#c-verify").innerHTML = ch.verify.ok ? `<span class="ok">✔ ${ch.verify.blocks} blocks intact</span>` : `<span class="bad">✖ block ${ch.verify.bad_block} altered</span>`;
+  $("#c-banks").innerHTML = Object.entries(ch.banks).map(([b, x]) => `<tr><td><b>Bank ${esc(b)}</b></td><td>${esc(x.jurisdiction)}</td>
+    <td class="mono">0x${esc(String(x.pubKey).replace(/^0x/, "").slice(0, 16))}…</td><td>${badge(x.status)}</td></tr>`).join("") || '<tr><td colspan="4" class="muted">No bank on-chain yet.</td></tr>';
+  $("#c-tx").innerHTML = ch.blocks.map(t => `<tr><td>${t.number}</td><td class="mono">${esc(t.fn)}</td><td>${esc(String(t.from).slice(0, 12))}</td>
+    <td class="muted mono" style="max-width:280px">${esc(JSON.stringify(t.args).slice(0, 90))}</td><td class="mono">${esc(String(t.hash || t.tx).replace(/^0x/, "").slice(0, 12))}…</td></tr>`).join("");
   const led = (await api("/api/ledger?limit=400")).filter(e => /register|access|quarantine/.test(e.type));
   $("#led").innerHTML = led.slice(0, 60).map(e => `<tr><td>${e.idx}</td><td>${badge(e.type.includes("denied") || e.type.includes("revoked") || e.type === "quarantine" ? "high" : "info", e.type)}</td><td>${esc(e.body.bank)}</td><td class="muted">${esc(e.body.reason || e.body.jurisdiction || e.body.by || "")}</td></tr>`).join("");
 });

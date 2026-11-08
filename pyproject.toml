@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sentinel-fl"
+version = "2.1.0"
+description = "Federated learning for cross-border financial crime detection (ESAIP Projet Applicatif 3)"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.26", "pandas>=2.1", "pyyaml>=6.0", "cryptography>=42.0",
+                "flwr[simulation]==1.18.0", "torch==2.5.1", "opacus==1.5.2"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["sentinel", "sentinel_flower"]
+
+[tool.flwr.app]
+publisher = "esaip-pa3"
+
+[tool.flwr.app.components]
+serverapp = "sentinel_flower.server_app:app"
+clientapp = "sentinel_flower.client_app:app"
+
+[tool.flwr.app.config]
+num-server-rounds = 15
+num-banks = 3
+dp = false
+noise-multiplier = 1.0
+epsilon-cap = 10.0
+rule = "trimmed_mean"
+defense = true
+attack-type = "none"
+attack-bank = "C"
+attack-start = 4
+local-steps = 40
+
+[tool.flwr.federations]
+default = "local-simulation"
+
+[tool.flwr.federations.local-simulation]
+options.num-supernodes = 3
+
+[tool.flwr.federations.consortium]
+address = "127.0.0.1:9093"   # replace 127.0.0.1 with the aggregator laptop's IP for the four-laptop demo
+insecure = true
+
+[tool.flwr.federations.docker]
+address = "superlink:9093"
+insecure = true

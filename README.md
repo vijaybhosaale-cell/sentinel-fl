@@ -45,6 +45,18 @@ Alerts go **both** to the dashboards (live) and by **e-mail** (SMTP, or an outbo
 | [docs/MULTI_LAPTOP_SETUP.md](docs/MULTI_LAPTOP_SETUP.md) | Demo-day setup, network, firewall, troubleshooting |
 | [docs/OPERATIONS_GUIDE.md](docs/OPERATIONS_GUIDE.md) | Every page, what it proves, 8-minute demo script |
 | [docs/ALERTS_AND_EMAIL.md](docs/ALERTS_AND_EMAIL.md) | Alert levels, e-mail triggers, Gmail app-password setup |
+| [docs/FLOWER.md](docs/FLOWER.md) | Flower + PyTorch + Opacus engine: simulation and SuperLink/SuperNode deployment |
+| [docs/SMART_CONTRACT.md](docs/SMART_CONTRACT.md) | ConsortiumRegistry smart contract: registration, access control, round anchoring |
+
+### Flower + PyTorch + Opacus and the smart contract
+
+```bash
+pip install -r requirements-flower.txt --extra-index-url https://download.pytorch.org/whl/cpu
+python -m sentinel_flower.simulate --attack label_flip       # Flower simulation, 3 banks, Opacus available with --dp
+```
+
+Access control is enforced by the `ConsortiumRegistry` smart contract (`contracts/`), simulated by default and deployable
+to a local Ethereum chain (`docs/SMART_CONTRACT.md`).
 
 ## Quick start, version 1 single-process demo (5 minutes)
 
@@ -55,7 +67,7 @@ git clone https://github.com/<your-account>/sentinel-fl.git
 cd sentinel-fl
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m unittest discover -s tests -v                 # 17 tests, ~25 s
+python -m unittest discover -s tests -v                 # 21 tests, ~25 s
 python -m sentinel demo                                 # then open http://127.0.0.1:8000
 ```
 

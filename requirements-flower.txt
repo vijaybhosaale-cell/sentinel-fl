@@ -1,0 +1,6 @@
+# Flower + PyTorch + Opacus engine (sentinel_flower/). Tested combination; install in a fresh venv or use Dockerfile.flower.
+# CPU wheels for PyTorch:  pip install -r requirements-flower.txt --extra-index-url https://download.pytorch.org/whl/cpu
+-r requirements.txt
+flwr[simulation]==1.18.0
+torch==2.5.1
+opacus==1.5.2
