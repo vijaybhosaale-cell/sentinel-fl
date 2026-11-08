@@ -45,6 +45,8 @@ def attack(model, banks, outs):
         li, lo = loss(b["X_train"][:k], b["y_train"][:k]), loss(Xo[:k], yo[:k])
         ii, io = b["y_train"][:k] > 0.5, yo[:k] > 0.5
         res[b["id"]] = {"auc_all": round(auc(-li, -lo), 4), "auc_illicit": round(auc(-li[ii], -lo[io]), 4),
+                        "auc_licit": round(auc(-li[~ii], -lo[~io]), 4),
+                        "auc_class_balanced": round((auc(-li[ii], -lo[io]) + auc(-li[~ii], -lo[~io])) / 2, 4),
                         "n_illicit_in": int(ii.sum()), "n_illicit_out": int(io.sum())}
     return res
 
