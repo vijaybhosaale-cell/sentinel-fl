@@ -51,7 +51,7 @@ every(2000, async () => {
   $("#c-banks").innerHTML = Object.entries(ch.banks).map(([b, x]) => `<tr><td><b>Bank ${esc(b)}</b></td><td>${esc(x.jurisdiction)}</td>
     <td class="mono">0x${esc(String(x.pubKey).replace(/^0x/, "").slice(0, 16))}…</td><td>${badge(x.status)}</td></tr>`).join("") || '<tr><td colspan="4" class="muted">No bank on-chain yet.</td></tr>';
   $("#c-tx").innerHTML = ch.blocks.map(t => `<tr><td>${t.number}</td><td class="mono">${esc(t.fn)}</td><td>${esc(String(t.from).slice(0, 12))}</td>
-    <td class="muted mono" style="max-width:280px">${esc(JSON.stringify(t.args).slice(0, 90))}</td><td class="mono">${esc(String(t.hash || t.tx).replace(/^0x/, "").slice(0, 12))}…</td></tr>`).join("");
+    <td class="muted" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(Object.entries(t.args || {}).filter(([k]) => k !== "runId").map(([k, v]) => `${k}=${String(v).length > 14 ? String(v).slice(0, 10) + "…" : v}`).join(" · "))}</td><td class="mono">${esc(String(t.hash || t.tx).replace(/^0x/, "").slice(0, 12))}…</td></tr>`).join("");
   const led = (await api("/api/ledger?limit=400")).filter(e => /register|access|quarantine/.test(e.type));
   $("#led").innerHTML = led.slice(0, 60).map(e => `<tr><td>${e.idx}</td><td>${badge(e.type.includes("denied") || e.type.includes("revoked") || e.type === "quarantine" ? "high" : "info", e.type)}</td><td>${esc(e.body.bank)}</td><td class="muted">${esc(e.body.reason || e.body.jurisdiction || e.body.by || "")}</td></tr>`).join("");
 });

@@ -1,0 +1,1295 @@
+{
+ "T1_seeds": {
+  "centralised": {
+   "values": [
+    0.7987,
+    0.8207,
+    0.9016
+   ],
+   "mean": 0.8403,
+   "std": 0.0442
+  },
+  "fedavg": {
+   "values": [
+    0.8244,
+    0.8613,
+    0.8916
+   ],
+   "mean": 0.8591,
+   "std": 0.0275
+  },
+  "label_flip_no_defence": {
+   "values": [
+    0.0119,
+    0.0132,
+    0.0104
+   ],
+   "mean": 0.0118,
+   "std": 0.0011
+  },
+  "label_flip_defended": {
+   "values": [
+    0.8018,
+    0.8326,
+    0.8709
+   ],
+   "mean": 0.8351,
+   "std": 0.0283
+  }
+ },
+ "T2_eps_per_round": {
+  "rounds": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20
+  ],
+  "eps": [
+   {
+    "A": 1.4239,
+    "B": 1.6216,
+    "C": 2.0724
+   },
+   {
+    "A": 1.6337,
+    "B": 1.8028,
+    "C": 2.3828
+   },
+   {
+    "A": 1.746,
+    "B": 1.984,
+    "C": 2.6933
+   },
+   {
+    "A": 1.8479,
+    "B": 2.1652,
+    "C": 3.0037
+   },
+   {
+    "A": 1.9498,
+    "B": 2.3464,
+    "C": 3.2855
+   },
+   {
+    "A": 2.0516,
+    "B": 2.4868,
+    "C": 3.4921
+   },
+   {
+    "A": 2.1535,
+    "B": 2.6076,
+    "C": 3.6987
+   },
+   {
+    "A": 2.2554,
+    "B": 2.7284,
+    "C": 3.9052
+   },
+   {
+    "A": 2.3573,
+    "B": 2.8492,
+    "C": 4.1118
+   },
+   {
+    "A": 2.4592,
+    "B": 2.97,
+    "C": 4.3183
+   },
+   {
+    "A": 2.561,
+    "B": 3.0908,
+    "C": 4.5249
+   },
+   {
+    "A": 2.6629,
+    "B": 3.2116,
+    "C": 4.7315
+   },
+   {
+    "A": 2.74,
+    "B": 3.3324,
+    "C": 4.938
+   },
+   {
+    "A": 2.8152,
+    "B": 3.4532,
+    "C": 5.1218
+   },
+   {
+    "A": 2.8904,
+    "B": 3.574,
+    "C": 5.267
+   },
+   {
+    "A": 2.9657,
+    "B": 3.6894,
+    "C": 5.4123
+   },
+   {
+    "A": 3.0409,
+    "B": 3.7792,
+    "C": 5.5576
+   },
+   {
+    "A": 3.1161,
+    "B": 3.869,
+    "C": 5.7029
+   },
+   {
+    "A": 3.1914,
+    "B": 3.9588,
+    "C": 5.8481
+   },
+   {
+    "A": 3.2666,
+    "B": 4.0486,
+    "C": 5.9934
+   }
+  ],
+  "pr_auc": [
+   0.2258,
+   0.4297,
+   0.5074,
+   0.6376,
+   0.7027,
+   0.6996,
+   0.6835,
+   0.6637,
+   0.6748,
+   0.6707,
+   0.6908,
+   0.6719,
+   0.6656,
+   0.6605,
+   0.5683,
+   0.6189,
+   0.6613,
+   0.6599,
+   0.7007,
+   0.7027
+  ]
+ },
+ "T2_cap": {
+  "cap": 3.0,
+  "final_eps": {
+   "A": 2.9657,
+   "B": 2.97,
+   "C": 2.6933
+  },
+  "final_pr_auc": 0.4901,
+  "eps_trajectory": [
+   {
+    "A": 1.4239,
+    "B": 1.6216,
+    "C": 2.0724
+   },
+   {
+    "A": 1.6337,
+    "B": 1.8028,
+    "C": 2.3828
+   },
+   {
+    "A": 1.746,
+    "B": 1.984,
+    "C": 2.6933
+   },
+   {
+    "A": 1.8479,
+    "B": 2.1652,
+    "C": 2.6933
+   },
+   {
+    "A": 1.9498,
+    "B": 2.3464,
+    "C": 2.6933
+   },
+   {
+    "A": 2.0516,
+    "B": 2.4868,
+    "C": 2.6933
+   },
+   {
+    "A": 2.1535,
+    "B": 2.6076,
+    "C": 2.6933
+   },
+   {
+    "A": 2.2554,
+    "B": 2.7284,
+    "C": 2.6933
+   },
+   {
+    "A": 2.3573,
+    "B": 2.8492,
+    "C": 2.6933
+   },
+   {
+    "A": 2.4592,
+    "B": 2.97,
+    "C": 2.6933
+   },
+   {
+    "A": 2.561,
+    "B": 2.97,
+    "C": 2.6933
+   },
+   {
+    "A": 2.6629,
+    "B": 2.97,
+    "C": 2.6933
+   },
+   {
+    "A": 2.74,
+    "B": 2.97,
+    "C": 2.6933
+   },
+   {
+    "A": 2.8152,
+    "B": 2.97,
+    "C": 2.6933
+   },
+   {
+    "A": 2.8904,
+    "B": 2.97,
+    "C": 2.6933
+   },
+   {
+    "A": 2.9657,
+    "B": 2.97,
+    "C": 2.6933
+   },
+   {
+    "A": 2.9657,
+    "B": 2.97,
+    "C": 2.6933
+   },
+   {
+    "A": 2.9657,
+    "B": 2.97,
+    "C": 2.6933
+   },
+   {
+    "A": 2.9657,
+    "B": 2.97,
+    "C": 2.6933
+   },
+   {
+    "A": 2.9657,
+    "B": 2.97,
+    "C": 2.6933
+   }
+  ],
+  "budget_records": [
+   {
+    "round": 4,
+    "type": "rejected",
+    "bank": "C"
+   },
+   {
+    "round": 5,
+    "type": "rejected",
+    "bank": "C"
+   },
+   {
+    "round": 6,
+    "type": "rejected",
+    "bank": "C"
+   },
+   {
+    "round": 7,
+    "type": "rejected",
+    "bank": "C"
+   },
+   {
+    "round": 8,
+    "type": "rejected",
+    "bank": "C"
+   },
+   {
+    "round": 9,
+    "type": "rejected",
+    "bank": "C"
+   },
+   {
+    "round": 10,
+    "type": "rejected",
+    "bank": "C"
+   },
+   {
+    "round": 11,
+    "type": "rejected",
+    "bank": "B"
+   },
+   {
+    "round": 11,
+    "type": "rejected",
+    "bank": "C"
+   },
+   {
+    "round": 12,
+    "type": "rejected",
+    "bank": "B"
+   },
+   {
+    "round": 12,
+    "type": "rejected",
+    "bank": "C"
+   },
+   {
+    "round": 13,
+    "type": "rejected",
+    "bank": "B"
+   },
+   {
+    "round": 13,
+    "type": "rejected",
+    "bank": "C"
+   },
+   {
+    "round": 14,
+    "type": "rejected",
+    "bank": "B"
+   },
+   {
+    "round": 14,
+    "type": "rejected",
+    "bank": "C"
+   },
+   {
+    "round": 15,
+    "type": "rejected",
+    "bank": "B"
+   },
+   {
+    "round": 15,
+    "type": "rejected",
+    "bank": "C"
+   },
+   {
+    "round": 16,
+    "type": "rejected",
+    "bank": "B"
+   },
+   {
+    "round": 16,
+    "type": "rejected",
+    "bank": "C"
+   },
+   {
+    "round": 17,
+    "type": "rejected",
+    "bank": "A"
+   }
+  ]
+ },
+ "T3_mia": {
+  "no_dp": {
+   "A": {
+    "auc_all": 0.5769,
+    "auc_illicit": 0.7784
+   },
+   "B": {
+    "auc_all": 0.5803,
+    "auc_illicit": 0.5172
+   },
+   "C": {
+    "auc_all": 0.5583,
+    "auc_illicit": 0.5388
+   }
+  },
+  "dp_noise_1.0": {
+   "A": {
+    "auc_all": 0.4314,
+    "auc_illicit": 0.7514
+   },
+   "B": {
+    "auc_all": 0.4518,
+    "auc_illicit": 0.4692
+   },
+   "C": {
+    "auc_all": 0.4499,
+    "auc_illicit": 0.4884
+   }
+  },
+  "note": "AUC 0.5 = attacker cannot tell members from non-members"
+ },
+ "T4_overhead_ms": {
+  "n_params": 1377,
+  "update_bytes_float64": 11016,
+  "update_bytes_json_http": null,
+  "hash_update": 0.0075,
+  "sign_update": 0.0369,
+  "verify_update": 0.1174,
+  "ledger_append": 0.6626,
+  "anomaly_scores_3_banks": 0.1245,
+  "trimmed_mean_3_banks": 0.0572,
+  "multi_krum_5_banks": 0.0729,
+  "merkle_root_5": 0.0038,
+  "round_seconds_no_dp": 0.039,
+  "round_seconds_dp": 3.404
+ },
+ "T5_audit": {
+  "ledger_records": 75,
+  "verify_original": {
+   "ok": true,
+   "checked": 75,
+   "bad_record": null,
+   "head": "0d331bfba55e59506dd27b13ec512eb8fecdb8b83ad6fe85feb3b8c3cbd96953",
+   "reason": "all 75 records verified"
+  },
+  "verify_after_insider_edit": {
+   "ok": false,
+   "checked": 26,
+   "bad_record": 26,
+   "reason": "content does not match its hash (record edited)"
+  },
+  "edited_record": 26,
+  "rounds_reconstructed": 15,
+  "rounds_mismatch": 0,
+  "reconstruction_ms": 1.1,
+  "chain_blocks": 23,
+  "anchors": 15,
+  "contract_status": {
+   "B": "approved",
+   "A": "approved",
+   "C": "quarantined"
+  },
+  "incident_timeline": [
+   {
+    "idx": 23,
+    "round": 4,
+    "type": "red_team_exercise",
+    "bank": "C",
+    "reason": null
+   },
+   {
+    "idx": 26,
+    "round": 4,
+    "type": "update",
+    "bank": "C",
+    "reason": "excluded by anomaly detector"
+   },
+   {
+    "idx": 29,
+    "round": 5,
+    "type": "quarantine",
+    "bank": "C",
+    "reason": "anomalous update (norm z=104.626, cosine=0.474)"
+   },
+   {
+    "idx": 32,
+    "round": 5,
+    "type": "update",
+    "bank": "C",
+    "reason": "excluded by anomaly detector"
+   }
+  ],
+  "per_round": [
+   {
+    "round": 1,
+    "accepted": [
+     "A",
+     "B",
+     "C"
+    ],
+    "excluded": [],
+    "root_matches_commit_and_chain": true
+   },
+   {
+    "round": 2,
+    "accepted": [
+     "A",
+     "B",
+     "C"
+    ],
+    "excluded": [],
+    "root_matches_commit_and_chain": true
+   },
+   {
+    "round": 3,
+    "accepted": [
+     "A",
+     "B",
+     "C"
+    ],
+    "excluded": [],
+    "root_matches_commit_and_chain": true
+   },
+   {
+    "round": 4,
+    "accepted": [
+     "A",
+     "B"
+    ],
+    "excluded": [
+     "C"
+    ],
+    "root_matches_commit_and_chain": true
+   },
+   {
+    "round": 5,
+    "accepted": [
+     "A",
+     "B"
+    ],
+    "excluded": [
+     "C"
+    ],
+    "root_matches_commit_and_chain": true
+   },
+   {
+    "round": 6,
+    "accepted": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "root_matches_commit_and_chain": true
+   },
+   {
+    "round": 7,
+    "accepted": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "root_matches_commit_and_chain": true
+   },
+   {
+    "round": 8,
+    "accepted": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "root_matches_commit_and_chain": true
+   },
+   {
+    "round": 9,
+    "accepted": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "root_matches_commit_and_chain": true
+   },
+   {
+    "round": 10,
+    "accepted": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "root_matches_commit_and_chain": true
+   },
+   {
+    "round": 11,
+    "accepted": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "root_matches_commit_and_chain": true
+   },
+   {
+    "round": 12,
+    "accepted": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "root_matches_commit_and_chain": true
+   },
+   {
+    "round": 13,
+    "accepted": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "root_matches_commit_and_chain": true
+   },
+   {
+    "round": 14,
+    "accepted": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "root_matches_commit_and_chain": true
+   },
+   {
+    "round": 15,
+    "accepted": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "root_matches_commit_and_chain": true
+   }
+  ]
+ },
+ "node_run": {
+  "metrics": [
+   {
+    "round": 1,
+    "pr_auc": 0.5866,
+    "f1": 0.6046,
+    "recall_at_1pct_fpr": 0.5923,
+    "per_bank": {
+     "A": 0.4616,
+     "B": 0.7621,
+     "C": 0.4412
+    }
+   },
+   {
+    "round": 2,
+    "pr_auc": 0.7668,
+    "f1": 0.7382,
+    "recall_at_1pct_fpr": 0.8,
+    "per_bank": {
+     "B": 0.8243,
+     "C": 0.7471,
+     "A": 0.686
+    }
+   },
+   {
+    "round": 3,
+    "pr_auc": 0.7594,
+    "f1": 0.7478,
+    "recall_at_1pct_fpr": 0.7846,
+    "per_bank": {
+     "B": 0.8268,
+     "C": 0.7374,
+     "A": 0.6629
+    }
+   },
+   {
+    "round": 4,
+    "pr_auc": 0.7747,
+    "f1": 0.7564,
+    "recall_at_1pct_fpr": 0.8,
+    "per_bank": {
+     "B": 0.834,
+     "A": 0.6773,
+     "C": 0.7641
+    }
+   },
+   {
+    "round": 5,
+    "pr_auc": 0.7943,
+    "f1": 0.7349,
+    "recall_at_1pct_fpr": 0.8391,
+    "per_bank": {
+     "A": 0.707,
+     "B": 0.8403
+    }
+   },
+   {
+    "round": 6,
+    "pr_auc": 0.793,
+    "f1": 0.7532,
+    "recall_at_1pct_fpr": 0.839,
+    "per_bank": {
+     "A": 0.7072,
+     "B": 0.8382
+    }
+   },
+   {
+    "round": 7,
+    "pr_auc": 0.766,
+    "f1": 0.7114,
+    "recall_at_1pct_fpr": 0.8046,
+    "per_bank": {
+     "A": 0.629,
+     "B": 0.8381
+    }
+   },
+   {
+    "round": 8,
+    "pr_auc": 0.7902,
+    "f1": 0.7188,
+    "recall_at_1pct_fpr": 0.8735,
+    "per_bank": {
+     "A": 0.6837,
+     "B": 0.8462
+    }
+   },
+   {
+    "round": 9,
+    "pr_auc": 0.8104,
+    "f1": 0.7505,
+    "recall_at_1pct_fpr": 0.862,
+    "per_bank": {
+     "A": 0.7268,
+     "B": 0.8544
+    }
+   },
+   {
+    "round": 10,
+    "pr_auc": 0.8019,
+    "f1": 0.7465,
+    "recall_at_1pct_fpr": 0.8505,
+    "per_bank": {
+     "A": 0.7014,
+     "B": 0.8548
+    }
+   },
+   {
+    "round": 11,
+    "pr_auc": 0.8105,
+    "f1": 0.7261,
+    "recall_at_1pct_fpr": 0.885,
+    "per_bank": {
+     "A": 0.7196,
+     "B": 0.8584
+    }
+   },
+   {
+    "round": 12,
+    "pr_auc": 0.8215,
+    "f1": 0.7502,
+    "recall_at_1pct_fpr": 0.8851,
+    "per_bank": {
+     "A": 0.7449,
+     "B": 0.8618
+    }
+   },
+   {
+    "round": 13,
+    "pr_auc": 0.8019,
+    "f1": 0.7319,
+    "recall_at_1pct_fpr": 0.8736,
+    "per_bank": {
+     "A": 0.6883,
+     "B": 0.8617
+    }
+   },
+   {
+    "round": 14,
+    "pr_auc": 0.8045,
+    "f1": 0.7393,
+    "recall_at_1pct_fpr": 0.8736,
+    "per_bank": {
+     "A": 0.6936,
+     "B": 0.8629
+    }
+   },
+   {
+    "round": 15,
+    "pr_auc": 0.812,
+    "f1": 0.7429,
+    "recall_at_1pct_fpr": 0.8851,
+    "per_bank": {
+     "A": 0.7087,
+     "B": 0.8663
+    }
+   }
+  ],
+  "banks": [
+   {
+    "id": "A",
+    "name": "Bank A",
+    "country": "France",
+    "city": "Paris",
+    "lat": 48.86,
+    "lon": 2.35,
+    "eps": 0.0,
+    "reason": "",
+    "flags": 0,
+    "n_train": 15085,
+    "status": "active",
+    "access": "approved",
+    "online": true,
+    "red_team": null
+   },
+   {
+    "id": "B",
+    "name": "Bank B",
+    "country": "Germany",
+    "city": "Frankfurt",
+    "lat": 50.11,
+    "lon": 8.68,
+    "eps": 0.0,
+    "reason": "",
+    "flags": 0,
+    "n_train": 12345,
+    "status": "active",
+    "access": "approved",
+    "online": true,
+    "red_team": null
+   },
+   {
+    "id": "C",
+    "name": "Bank C",
+    "country": "Netherlands",
+    "city": "Amsterdam",
+    "lat": 52.37,
+    "lon": 4.9,
+    "eps": 0.0,
+    "reason": "anomalous update (norm z=104.626, cosine=0.474)",
+    "flags": 2,
+    "n_train": 8569,
+    "status": "quarantined",
+    "access": "approved",
+    "online": true,
+    "red_team": "label_flip"
+   }
+  ],
+  "rounds": [
+   {
+    "round": 1,
+    "participants": [
+     "B",
+     "A",
+     "C"
+    ],
+    "received": [
+     "A",
+     "B",
+     "C"
+    ],
+    "used": [
+     "A",
+     "B",
+     "C"
+    ],
+    "excluded": [],
+    "rejected": [],
+    "scores": {},
+    "bytes_in": 33048,
+    "seconds": 1.21,
+    "model_hash": "8a105ebbb7eb521b9807f57445888e83b59dcab09f8106668c94105cb385fa33",
+    "merkle_root": "41dffcff1d043cab0b38dbd4cb4d5ea11490718986b8642472f32313d9d3f6e8",
+    "anchor_tx": "17c02907134c14f0bbc016ed95e4d9ce822078e513c02af4892ee269b715b47f"
+   },
+   {
+    "round": 2,
+    "participants": [
+     "B",
+     "A",
+     "C"
+    ],
+    "received": [
+     "A",
+     "B",
+     "C"
+    ],
+    "used": [
+     "A",
+     "B",
+     "C"
+    ],
+    "excluded": [],
+    "rejected": [],
+    "scores": {},
+    "bytes_in": 33048,
+    "seconds": 1.0,
+    "model_hash": "46a980adecc4e1779a1f30774318d035f284805ca58f4a39343072ad0f9953ef",
+    "merkle_root": "e28217a4e8dbf7805db4f20dfbbe421f4ee6379a3dbac4d98b3814682c2bac51",
+    "anchor_tx": "dab6510489a1e00e237104f56a949c9fd137c5b90c4b5653fa7f8a722679cffc"
+   },
+   {
+    "round": 3,
+    "participants": [
+     "B",
+     "A",
+     "C"
+    ],
+    "received": [
+     "A",
+     "B",
+     "C"
+    ],
+    "used": [
+     "A",
+     "B",
+     "C"
+    ],
+    "excluded": [],
+    "rejected": [],
+    "scores": {
+     "A": {
+      "norm": 0.9029551499675571,
+      "norm_z": 2.598,
+      "cosine_to_median": 0.465
+     },
+     "B": {
+      "norm": 1.738337037014563,
+      "norm_z": 0.674,
+      "cosine_to_median": 0.562
+     },
+     "C": {
+      "norm": 1.566177411042501,
+      "norm_z": 0.0,
+      "cosine_to_median": 0.797
+     }
+    },
+    "bytes_in": 33048,
+    "seconds": 1.0,
+    "model_hash": "b2c17a875e3ceb80a54d3e5bbee92ed81b7e04ee6958b7858e7f4217cf5c7c68",
+    "merkle_root": "73a5689728e2ddd2ca8be54730ef91555c6341c8da17cb7e293a70c0f394717e",
+    "anchor_tx": "5da6cc783a2370df1f31ec3ca519b91378cb6c108dfb402e4047096405f806fb"
+   },
+   {
+    "round": 4,
+    "participants": [
+     "B",
+     "A",
+     "C"
+    ],
+    "received": [
+     "A",
+     "B",
+     "C"
+    ],
+    "used": [
+     "A",
+     "B"
+    ],
+    "excluded": [
+     "C"
+    ],
+    "rejected": [],
+    "scores": {
+     "A": {
+      "norm": 0.8797909685292692,
+      "norm_z": 0.674,
+      "cosine_to_median": 0.484
+     },
+     "B": {
+      "norm": 1.150468488291968,
+      "norm_z": 0.0,
+      "cosine_to_median": 0.513
+     },
+     "C": {
+      "norm": 105.44743019734568,
+      "norm_z": 259.894,
+      "cosine_to_median": 0.269
+     }
+    },
+    "bytes_in": 33048,
+    "seconds": 1.01,
+    "model_hash": "a0413810540e61b6b2a71f8ca5b798ad427a29511652ee3f36ed549ad3d1206a",
+    "merkle_root": "cdf2e31e3a02a1fdef7c33d2fe8b4c539b6a1f01cf407a41502da2e3689799c4",
+    "anchor_tx": "e814cdd20753ba5bc2542b4c8be40309ebfeebc9bd845779d2af46653b639e9b"
+   },
+   {
+    "round": 5,
+    "participants": [
+     "B",
+     "A",
+     "C"
+    ],
+    "received": [
+     "A",
+     "B",
+     "C"
+    ],
+    "used": [
+     "A",
+     "B"
+    ],
+    "excluded": [
+     "C"
+    ],
+    "rejected": [],
+    "scores": {
+     "A": {
+      "norm": 0.9737231526142159,
+      "norm_z": 0.674,
+      "cosine_to_median": 0.406
+     },
+     "B": {
+      "norm": 1.6533022437309117,
+      "norm_z": 0.0,
+      "cosine_to_median": 0.669
+     },
+     "C": {
+      "norm": 107.06823006109735,
+      "norm_z": 104.626,
+      "cosine_to_median": 0.474
+     }
+    },
+    "bytes_in": 33048,
+    "seconds": 1.21,
+    "model_hash": "862b584ebf8cd49e1927ee1c2f1f7b27c7e6cf2be5f93f5634d9f198837ec677",
+    "merkle_root": "7697a81a512fe7e0391ce86b41b183ca58b9a74f07795f1d16e24128c59c73bf",
+    "anchor_tx": "d0a96476d0ddab891474dbef5a834e7df58aa560f9ca5892ca285b231a2a216e"
+   },
+   {
+    "round": 6,
+    "participants": [
+     "B",
+     "A"
+    ],
+    "received": [
+     "A",
+     "B"
+    ],
+    "used": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "rejected": [],
+    "scores": {},
+    "bytes_in": 22032,
+    "seconds": 1.0,
+    "model_hash": "0d40d726e76d890e1a7d702277335f8f0bcebbf1f59ed0b38f12dec5e517ef8d",
+    "merkle_root": "ac7c147402e4b5731dc88345305be34261f8e82da9f0e8c7fa46e6fea228be48",
+    "anchor_tx": "8f17c7d29c4e905d7598e832753aaed8f325bd2915a2448fecf5aaea84a53072"
+   },
+   {
+    "round": 7,
+    "participants": [
+     "B",
+     "A"
+    ],
+    "received": [
+     "A",
+     "B"
+    ],
+    "used": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "rejected": [],
+    "scores": {},
+    "bytes_in": 22032,
+    "seconds": 1.01,
+    "model_hash": "2e8cba6a353f43f79652095f1437ab8fa501e995e08ed864fe5ce74bae0d113d",
+    "merkle_root": "50a91493acfb49c340221e2cffe5b6ab74952c21dbdfeddfc53d2746a28e2d02",
+    "anchor_tx": "daf83357e8691d5093a7208f4b37cb779f0e70470dbe4d991dbefd08cc89fdf6"
+   },
+   {
+    "round": 8,
+    "participants": [
+     "B",
+     "A"
+    ],
+    "received": [
+     "A",
+     "B"
+    ],
+    "used": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "rejected": [],
+    "scores": {},
+    "bytes_in": 22032,
+    "seconds": 1.01,
+    "model_hash": "fb3a6726dd83fcf161f5eed2f50ad3498f0572eec43d464028c6c9abdf055c7f",
+    "merkle_root": "992a540bff9b4d2f1a7054f868bef8950fa808fa52bada29443af6085def61e2",
+    "anchor_tx": "5d9848e1d4c6e596681fe0bfd6c46b014eb18fedbebbdc6c5b448891889193c7"
+   },
+   {
+    "round": 9,
+    "participants": [
+     "B",
+     "A"
+    ],
+    "received": [
+     "A",
+     "B"
+    ],
+    "used": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "rejected": [],
+    "scores": {},
+    "bytes_in": 22032,
+    "seconds": 1.0,
+    "model_hash": "66d1249f09f9956b42b12b934e56ce7e84744972412bc7da0937b5be4d843b98",
+    "merkle_root": "f2cb6f7c58a65bec5d556475303c174e1fc01c260e2a992a0a1658d92b1fe9f5",
+    "anchor_tx": "2b5aef63c1215ca89a7844c9b8cdf85226e6f5e3c77ade92a7c4bae88f7977a7"
+   },
+   {
+    "round": 10,
+    "participants": [
+     "B",
+     "A"
+    ],
+    "received": [
+     "A",
+     "B"
+    ],
+    "used": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "rejected": [],
+    "scores": {},
+    "bytes_in": 22032,
+    "seconds": 1.2,
+    "model_hash": "bbd0355dc02d1183e176c6f271762d0fce2851c87282b3ddf506ea7d7409a031",
+    "merkle_root": "894776b5349109083205281cf6c1b8149b5970b7eb43e714f9f9a4053741d582",
+    "anchor_tx": "7ed476eea8fa07312bcb262b655f4af2c3a53390959af83779b2e8c2a5f58a4b"
+   },
+   {
+    "round": 11,
+    "participants": [
+     "B",
+     "A"
+    ],
+    "received": [
+     "A",
+     "B"
+    ],
+    "used": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "rejected": [],
+    "scores": {},
+    "bytes_in": 22032,
+    "seconds": 1.0,
+    "model_hash": "c895982b088c75fe62044c1aad5390e261ae7ad7ffba8b1120f3c25fd3f8959c",
+    "merkle_root": "ff14f8b0b4eae8108ec6dc20d13bf682a9d7ae0aa4d4a31d9aa6bd62546826f2",
+    "anchor_tx": "9cb59abd7d4ec7d620aa6251ba4b65baecc887b6a0d1a976bdefea43799ae613"
+   },
+   {
+    "round": 12,
+    "participants": [
+     "B",
+     "A"
+    ],
+    "received": [
+     "A",
+     "B"
+    ],
+    "used": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "rejected": [],
+    "scores": {},
+    "bytes_in": 22032,
+    "seconds": 1.0,
+    "model_hash": "3ba95e9b9c4f2da899ffdd3bf2af2ba2465aca94293b8e517b6cef4fad7b2827",
+    "merkle_root": "53a3e863d42309c0bff0ffe9ef43f8931f8079dde760399b6c9863ef47cbbfd9",
+    "anchor_tx": "7998866b93f2e2451e58a8280c450fb90c6570118bbecccb615d501bb88763c0"
+   },
+   {
+    "round": 13,
+    "participants": [
+     "B",
+     "A"
+    ],
+    "received": [
+     "A",
+     "B"
+    ],
+    "used": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "rejected": [],
+    "scores": {},
+    "bytes_in": 22032,
+    "seconds": 1.0,
+    "model_hash": "2308604c44c57bda728314f9c434d27f3e693dd154ca6497099ba4e013286546",
+    "merkle_root": "14827d2bc5495664ad52351ee6553c00004beaed7e633332a4c6f6da658f0756",
+    "anchor_tx": "237ce62b267d368cad0c68e873958b5bfea7c0b4b37633f38a62aaf613f4bae6"
+   },
+   {
+    "round": 14,
+    "participants": [
+     "B",
+     "A"
+    ],
+    "received": [
+     "A",
+     "B"
+    ],
+    "used": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "rejected": [],
+    "scores": {},
+    "bytes_in": 22032,
+    "seconds": 1.0,
+    "model_hash": "4f57f6bc99abf36e7b4cc5d8e17e62f060650e3b6323ddbc84e40cd2e133cf04",
+    "merkle_root": "eeac0b79f3d667c4af0122db966290b83378063256487df08645aaacc0641990",
+    "anchor_tx": "6c8d6a3c2aa9d04d4220f958a169592a9cde17a1a42a2115bd598f254b5433f3"
+   },
+   {
+    "round": 15,
+    "participants": [
+     "B",
+     "A"
+    ],
+    "received": [
+     "A",
+     "B"
+    ],
+    "used": [
+     "A",
+     "B"
+    ],
+    "excluded": [],
+    "rejected": [],
+    "scores": {},
+    "bytes_in": 22032,
+    "seconds": 1.0,
+    "model_hash": "91e77594ea2ad69419a2835423bd550de2d2e3dddf26a2d7d02a376cd977548f",
+    "merkle_root": "1e482c7f1fa46956734be4808fd9b687b24e64d34c50b68c99be4235f29fcbc9",
+    "anchor_tx": "8eb1de29543ff77e9026ccf3c0f2b4afd445be682976b5a6a9b4d806efa951df"
+   }
+  ],
+  "residency": {
+   "A": {
+    "total_bytes": 448116,
+    "raw_rows_sent": 0,
+    "blocked_by_aggregator": 0,
+    "local_rows": 25142
+   },
+   "B": {
+    "total_bytes": 448153,
+    "raw_rows_sent": 0,
+    "blocked_by_aggregator": 0,
+    "local_rows": 20575
+   },
+   "C": {
+    "total_bytes": 148989,
+    "raw_rows_sent": 0,
+    "blocked_by_aggregator": 0,
+    "local_rows": 14283
+   }
+  },
+  "alerts_high": 45,
+  "notifications": [
+   "Bank A: 3 high-risk transactions (round 9)",
+   "Bank C quarantined in round 5",
+   "Bank B: 3 high-risk transactions (round 5)"
+  ],
+  "aria": "Yes. Bank C was caught in round 5 (record #29): anomalous update (norm z=104.626, cosine=0.474). Current status of Bank C: quarantined."
+ }
+}

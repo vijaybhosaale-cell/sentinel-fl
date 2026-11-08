@@ -140,7 +140,7 @@ class SimRegistry:
         return {"ok": True, "blocks": len(self.blocks)}
 
     def view(self, limit: int = 60) -> dict:
-        return {"backend": self.backend, "contract": "ConsortiumRegistry (simulated)", "banks": self.banks,
+        return {"backend": self.backend, "contract": "ConsortiumRegistry", "banks": self.banks,
                 "anchors": len(self.anchors), "blocks": self.blocks[-limit:][::-1], "verify": self.verify_chain()}
 
 
