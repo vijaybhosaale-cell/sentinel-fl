@@ -559,7 +559,18 @@ class AggregatorNode:
             root = Path(__file__).resolve().parent.parent
             res = root / "experiments" / "results.json"
             base = root / "runs" / "baselines.json"
-            return {"matrix": json.loads(res.read_text()) if res.exists() else None,
+            fl = root / "runs" / "flower"
+            flower = None
+            if (fl / "state.json").exists():
+                from .ledger import open_readonly
+                st = json.loads((fl / "state.json").read_text())
+                chain = json.loads((fl / "chain.json").read_text()) if (fl / "chain.json").exists() else {}
+                flower = {"name": st.get("name"), "status": st.get("status"), "metrics": st.get("metrics", []),
+                          "banks": st.get("banks", []), "dp": st.get("dp"), "attack": st.get("attack"),
+                          "ledger": open_readonly(fl / "ledger.db").verify() if (fl / "ledger.db").exists() else None,
+                          "contract": {b: x["status"] for b, x in chain.get("banks", {}).items()},
+                          "anchors": len(chain.get("anchors", {}))}
+            return {"flower": flower, "matrix": json.loads(res.read_text()) if res.exists() else None,
                     "baselines": json.loads(base.read_text()) if base.exists() else None,
                     "live": {"run": self.run, "metrics": self.metrics}}
 

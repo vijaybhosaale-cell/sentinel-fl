@@ -126,6 +126,55 @@ def cmd_cluster(a):
             p.terminate()
 
 
+def cmd_showcase(a):
+    """One-laptop defence demo: aggregator + 3 bank nodes + smart-contract registry, browser tabs opened."""
+    import os
+    import urllib.request
+    import webbrowser
+    root = Path(__file__).resolve().parent.parent
+    os.chdir(root)
+    if not (root / "runs" / "baselines.json").exists():
+        print("Computing the centralised / local-only baselines once (about 10 s) ...")
+        from .federation import centralized_baseline, local_only
+        cfg = load_config("configs/fedavg.yaml")
+        (root / "runs").mkdir(exist_ok=True)
+        (root / "runs" / "baselines.json").write_text(json.dumps({"centralized": centralized_baseline(cfg), "local_only": local_only(cfg)}, indent=2))
+    a.fresh, a.auto_approve, a.banks, a.host = True, False, 3, "127.0.0.1"
+    import threading
+    def _open():
+        for _ in range(60):
+            try:
+                urllib.request.urlopen(f"http://127.0.0.1:{a.port}/api/overview", timeout=1); break
+            except Exception:  # noqa: BLE001
+                time.sleep(0.5)
+        time.sleep(4)
+        if not a.no_browser:
+            for u in [f"http://127.0.0.1:{a.port}"] + [f"http://127.0.0.1:{a.port + 101 + i}" for i in range(3)]:
+                webbrowser.open_new_tab(u)
+        print(SHOWCASE_SCRIPT.format(port=a.port))
+    threading.Thread(target=_open, daemon=True).start()
+    cmd_cluster(a)
+
+
+SHOWCASE_SCRIPT = """
+==================== SENTINEL-FL one-laptop demo ====================
+ Control room  http://127.0.0.1:{port}      operator token: demo
+ Bank A Paris  http://127.0.0.1:8101   Bank B Frankfurt  :8102   Bank C Amsterdam  :8103
+
+ 1. Registry & access  -> Approve A, B, C   (smart contract + ledger record each decision)
+ 2. Control room       -> Start run (15 rounds, trimmed mean, defences on)
+ 3. Bank B tab         -> Transactions / Alerts fill up each round (data stays local)
+ 4. Attack lab, after round 4 -> Bank C + A1 Label flipping -> Launch
+    -> C excluded, then quarantined; contract status 'quarantined'; e-mail alert
+ 5. Audit ledger       -> Verify chain (green) -> Edit record -> Verify (red at that record)
+ 6. Regulator . ARIA   -> "Did anyone poison the model?"  "Write the incident report"
+ 7. Bank C tab         -> Data residency: 0 raw rows sent
+ 8. Results            -> matrix E1-E10 + Flower run (python -m sentinel_flower.simulate --attack label_flip)
+ Ctrl+C stops everything.
+=====================================================================
+"""
+
+
 def main():
     p = argparse.ArgumentParser(prog="sentinel", description="SENTINEL-FL: federated AML detection with audit and ARIA")
     sp = p.add_subparsers(dest="cmd", required=True)
@@ -163,6 +212,9 @@ def main():
     s.add_argument("--host", default="127.0.0.1"); s.add_argument("--fresh", action="store_true")
     s.add_argument("--auto-approve", action="store_true")
     s.set_defaults(fn=cmd_cluster)
+    s = sp.add_parser("showcase", help="one-laptop defence demo: everything on this machine, browser tabs opened")
+    s.add_argument("--port", type=int, default=8000); s.add_argument("--no-browser", action="store_true")
+    s.set_defaults(fn=cmd_showcase)
     a = p.parse_args()
     a.fn(a)
 

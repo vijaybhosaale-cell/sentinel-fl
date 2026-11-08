@@ -19,6 +19,15 @@ Three (or five) simulated European banks train one anti-money-laundering model t
 - **ARIA:** a copilot that answers questions such as *"Did anyone poison the model?"* by calling read-only tools over the ledger, citing record numbers, and writing incident reports. It uses a local LLM through Ollama when available, and a deterministic offline mode otherwise.
 - **Red team:** label flipping, boosted scaling, backdoor, free-riding, raw-data exfiltration and man-in-the-middle tampering, each switchable from a config flag.
 
+## Defence demo on one laptop
+
+```bash
+python -m sentinel showcase          # Windows: double-click start_demo.bat
+```
+
+Starts the aggregator, Banks A, B and C (separate processes) and the smart-contract registry, opens the control room
+and the three bank portals, and prints the demo checklist. See [docs/ONE_MACHINE_DEMO.md](docs/ONE_MACHINE_DEMO.md).
+
 ## Version 2: distributed consortium (multi-page, multi-laptop)
 
 Version 2 runs the aggregator and every bank as **separate nodes** with their own web portals. The banks pull work from the

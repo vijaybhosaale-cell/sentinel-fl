@@ -8,6 +8,11 @@
     <div class="panel"><h2>Live run · PR-AUC per round</h2><div id="live"></div><p class="muted" id="liveinfo"></p></div>
     <div class="panel"><h2>Experiment matrix · final PR-AUC</h2><div id="bars"></div></div>
   </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="panel"><h2>Flower + PyTorch + Opacus run <span class="right muted" id="flname"></span></h2><div id="flchart"></div><p class="muted" id="flinfo"></p></div>
+    <div class="panel"><h2>Flower run · banks, privacy and integrity</h2><div class="scroll"><table><thead><tr><th>Bank</th><th>Status</th><th>Contract</th><th>ε (Opacus)</th><th>Reason</th></tr></thead><tbody id="flbanks"></tbody></table></div>
+      <p id="flverify" style="margin-top:10px"></p></div>
+  </div>
   <div class="panel" style="margin-top:14px"><h2>Experiment matrix (synthetic data)</h2><div class="scroll"><table><thead><tr><th>ID</th><th>Experiment</th><th>PR-AUC</th><th>F1</th><th>Recall @1% FPR</th><th>ε max</th><th>Backdoor success</th><th>Attacker caught</th></tr></thead><tbody id="mx"></tbody></table></div></div>
 </main>
 <script>
@@ -19,6 +24,17 @@ every(4000, async () => {
     { ymin: 0, ymax: 1, xmin: 1, xmax: Math.max(r.live.run.rounds || 2, 2), refs: base ? [{ y: base, label: `centralised baseline ${base}` }] : [], xlabel: "round" });
   const last = r.live.metrics.at(-1);
   $("#liveinfo").textContent = last ? `Latest: PR-AUC ${last.pr_auc}, F1 ${last.f1}, recall at 1% FPR ${last.recall_at_1pct_fpr}` : "Start a run in the control room.";
+  const f = r.flower;
+  if (!f) { $("#flinfo").innerHTML = 'No Flower run yet. In a second terminal: <span class="mono">python -m sentinel_flower.simulate --attack label_flip</span> (needs requirements-flower.txt).'; }
+  else {
+    $("#flname").textContent = `${f.name} · ${f.status}`;
+    lineChart($("#flchart"), [{ name: "federated PR-AUC (Flower)", color: "#a78bfa", fill: true, points: f.metrics.map(m => [m.round, m.pr_auc]) }],
+      { ymin: 0, ymax: 1, xmin: 1, xmax: Math.max(f.metrics.length, 2), refs: base ? [{ y: base, label: `centralised ${base}` }] : [], xlabel: "round" });
+    const fl = f.metrics.at(-1);
+    $("#flinfo").textContent = fl ? `Final PR-AUC ${fl.pr_auc} · DP ${f.dp?.enabled ? "on (Opacus)" : "off"} · attack: ${f.attack?.type || "none"}${f.attack?.type && f.attack.type !== "none" ? " by Bank " + f.attack.bank : ""}` : "";
+    $("#flbanks").innerHTML = f.banks.map(b => `<tr><td><b>${esc(b.name || b.id)}</b></td><td>${badge(b.status)}</td><td>${badge(f.contract[b.id] || "none")}</td><td>${fmt(b.eps, 2)}</td><td class="muted">${esc(b.reason || "")}</td></tr>`).join("");
+    $("#flverify").innerHTML = (f.ledger?.ok ? `<span class="ok">✔ Flower run ledger: ${esc(f.ledger.reason)}</span>` : `<span class="bad">✖ ${esc(f.ledger?.reason || "no ledger")}</span>`) + ` · ${f.anchors} rounds anchored in the registry contract`;
+  }
   if (!r.matrix) { $("#mx").innerHTML = '<tr><td colspan="8" class="muted">No matrix yet. Run: python -m sentinel matrix (about 4 minutes)</td></tr>'; $("#bars").innerHTML = '<span class="muted">no matrix yet</span>'; return; }
   $("#mx").innerHTML = r.matrix.map(x => `<tr><td>${esc(x.id)}</td><td>${esc(x.name)}</td><td>${fmt(x.pr_auc)}</td><td>${fmt(x.f1)}</td><td>${fmt(x.recall_at_1pct_fpr)}</td>
     <td>${x.eps_max ? fmt(x.eps_max, 2) : "–"}</td><td>${x.backdoor_success ?? "–"}</td><td class="${/not/.test(x.caught) ? "warn" : "ok"}">${typeof x.caught === "string" ? esc(x.caught) : "–"}</td></tr>`).join("");
