@@ -156,6 +156,64 @@ def cmd_showcase(a):
     cmd_cluster(a)
 
 
+def cmd_web(a):
+    """Hosted mode for a public link (Render, Hugging Face, any Docker host): ONE port.
+
+    Aggregator on 0.0.0.0:$PORT; Banks A, B, C run in the same process on internal ports and are reached
+    through the gateway at /bank/A/, /bank/B/, /bank/C/. With --autodemo the consortium is approved and a
+    15-round run with a live label-flipping attack by Bank C is played at start-up, so the link always
+    shows a complete scenario. Operator actions need SENTINEL_ADMIN_TOKEN (set it on the host).
+    """
+    import os
+    import threading
+    import urllib.request
+    from .aggregator_node import AggregatorNode
+    from .bank_node import BankNode
+    root = Path(__file__).resolve().parent.parent
+    os.chdir(root)
+    port = int(os.environ.get("PORT", a.port))
+    os.environ.setdefault("SENTINEL_ADMIN_TOKEN", "demo")
+    if not (root / "runs" / "baselines.json").exists():
+        from .federation import centralized_baseline, local_only
+        bc = load_config("configs/fedavg.yaml")
+        (root / "runs").mkdir(exist_ok=True)
+        (root / "runs" / "baselines.json").write_text(json.dumps({"centralized": centralized_baseline(bc), "local_only": local_only(bc)}, indent=2))
+    cfg = load_config(None, [])
+    agg = AggregatorNode(cfg, root / "nodes" / "web" / "aggregator", "0.0.0.0", port, fresh=True)
+    for i, b in enumerate("ABC"):
+        agg.server.proxies[f"/bank/{b}"] = f"http://127.0.0.1:{9101 + i}"
+    agg.start(background=True)
+    for i, b in enumerate("ABC"):
+        BankNode(b, f"http://127.0.0.1:{port}", cfg, root / "nodes" / "web" / f"bank_{b}", "127.0.0.1", 9101 + i,
+                 email_alerts=True).start(background=True)
+    print(f"SENTINEL-FL web mode on port {port}: control room /, banks /bank/A/ /bank/B/ /bank/C/", flush=True)
+
+    def call(method, path, body=None):
+        req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", data=json.dumps(body).encode() if body is not None else None,
+                                     method=method, headers={"Content-Type": "application/json",
+                                                             "X-Admin-Token": os.environ["SENTINEL_ADMIN_TOKEN"]})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.loads(r.read())
+
+    def autodemo():
+        while len(call("GET", "/api/registry")) < 3:
+            time.sleep(1)
+        for b in "ABC":
+            call("POST", "/api/registry/action", {"bank": b, "action": "approve"})
+        call("POST", "/api/control/start", {"rounds": 15, "round_delay": 2})
+        while call("GET", "/api/overview")["run"]["round"] < 4:
+            time.sleep(1)
+        call("POST", "/api/attack/launch", {"bank": "C", "type": "label_flip"})
+        print("autodemo: run started, Bank C attacking from round 4", flush=True)
+    if a.autodemo:
+        threading.Thread(target=autodemo, daemon=True).start()
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        pass
+
+
 SHOWCASE_SCRIPT = """
 ==================== SENTINEL-FL one-laptop demo ====================
  Control room  http://127.0.0.1:{port}      operator token: demo
@@ -212,6 +270,9 @@ def main():
     s.add_argument("--host", default="127.0.0.1"); s.add_argument("--fresh", action="store_true")
     s.add_argument("--auto-approve", action="store_true")
     s.set_defaults(fn=cmd_cluster)
+    s = sp.add_parser("web", help="hosted mode: everything behind ONE port (for a public link)")
+    s.add_argument("--port", type=int, default=7860); s.add_argument("--autodemo", action="store_true")
+    s.set_defaults(fn=cmd_web)
     s = sp.add_parser("showcase", help="one-laptop defence demo: everything on this machine, browser tabs opened")
     s.add_argument("--port", type=int, default=8000); s.add_argument("--no-browser", action="store_true")
     s.set_defaults(fn=cmd_showcase)

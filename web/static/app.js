@@ -6,6 +6,8 @@ const ago = ts => { if (!ts) return "–"; const s = Math.max(0, Date.now() / 10
 const clock = ts => ts ? new Date(ts * 1000).toLocaleTimeString() : "–";
 const badge = (s, label) => `<span class="badge b-${esc(String(s).split(" ")[0])}">${esc(label ?? s)}</span>`;
 
+// When served behind the single-address gateway, a bank portal lives under /bank/<ID>/ (python -m sentinel web).
+const BASE = (location.pathname.match(/^\/bank\/[A-Za-z]/) || [""])[0];
 const PAGES = {
   aggregator: [["/", "Control room"], ["/registry", "Registry & access"], ["/training", "Training rounds"], ["/attack", "Attack lab"],
                ["/ledger", "Audit ledger"], ["/alerts", "Alerts & e-mail"], ["/regulator", "Regulator · ARIA"], ["/results", "Results"]],
@@ -14,8 +16,9 @@ const PAGES = {
 };
 
 function shell(role, title, subtitle) {
-  const here = location.pathname.replace(/\.html$/, "").replace(/\/index$/, "/") || "/";
-  const tabs = PAGES[role].map(([h, t]) => `<a href="${h}" class="${h === here ? "on" : ""}">${t}</a>`).join("");
+  const here = location.pathname.slice(BASE.length).replace(/\.html$/, "").replace(/\/index$/, "/") || "/";
+  const tabs = PAGES[role].map(([h, t]) => `<a href="${BASE}${h}" class="${h === here ? "on" : ""}">${t}</a>`).join("");
+  if (BASE) document.querySelectorAll('a[href^="/"]').forEach(a => a.setAttribute("href", BASE + a.getAttribute("href")));
   document.body.insertAdjacentHTML("afterbegin", `<header class="top"><div class="brand">SENTINEL-FL<small>${esc(subtitle)}</small></div>
     <nav class="tabs">${tabs}</nav><span id="pill" class="status-pill">connecting…</span></header>
     <div class="modal" id="tokmodal"><div class="box"><h3 style="margin-top:0">Operator token</h3>
@@ -24,20 +27,23 @@ function shell(role, title, subtitle) {
     <div class="row"><input id="tokin" placeholder="token" style="flex:1"><button class="solid" id="toksave">Save</button></div></div></div>
     <div class="toast" id="toast"></div>`);
   document.title = `${title} · SENTINEL-FL`;
+  if (role === "aggregator") fetch("/api/portals").then(r => r.ok ? r.json() : []).then(ps => {
+    if (ps.length) $("nav.tabs").insertAdjacentHTML("beforeend", ps.map(p => `<a href="${p.path}" style="color:#2ee6a6">Bank ${esc(p.bank)} ↗</a>`).join(""));
+  }).catch(() => {});
   $("#toksave").onclick = () => { localStorage.setItem("sentinel_token", $("#tokin").value.trim()); $("#tokmodal").classList.remove("on"); };
 }
 function toast(msg, ms = 3500) { const t = $("#toast"); t.innerHTML = msg; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", ms); }
 function pill(text, cls = "") { const p = $("#pill"); if (p) { p.textContent = text; p.className = "status-pill " + cls; } }
 
 async function api(path) {
-  const r = await fetch(path, { cache: "no-store" });
+  const r = await fetch(BASE + path, { cache: "no-store" });
   const j = await r.json();
   if (!r.ok) throw new Error(j.error || r.statusText);
   return j;
 }
 async function post(path, body = {}) {
   const tok = localStorage.getItem("sentinel_token") || "";
-  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-Admin-Token": tok }, body: JSON.stringify(body) });
+  const r = await fetch(BASE + path, { method: "POST", headers: { "Content-Type": "application/json", "X-Admin-Token": tok }, body: JSON.stringify(body) });
   const j = await r.json().catch(() => ({}));
   if (r.status === 403 && /token/.test(j.error || "")) { $("#tokmodal").classList.add("on"); throw new Error("operator token required"); }
   if (!r.ok) throw new Error(j.error || r.statusText);

@@ -1,0 +1,10 @@
+# Public, single-address deployment (Render, Hugging Face Spaces, any Docker host).
+# Aggregator + Banks A, B, C in one container; banks at /bank/A/, /bank/B/, /bank/C/.
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+ENV PYTHONUNBUFFERED=1 ARIA_USE_LLM=0 PORT=7860
+EXPOSE 7860
+CMD ["python", "-m", "sentinel", "web", "--autodemo"]

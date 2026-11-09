@@ -19,6 +19,11 @@ Three (or five) simulated European banks train one anti-money-laundering model t
 - **ARIA:** a copilot that answers questions such as *"Did anyone poison the model?"* by calling read-only tools over the ledger, citing record numbers, and writing incident reports. It uses a local LLM through Ollama when available, and a deterministic offline mode otherwise.
 - **Red team:** label flipping, boosted scaling, backdoor, free-riding, raw-data exfiltration and man-in-the-middle tampering, each switchable from a config flag.
 
+## Live online
+
+`python -m sentinel web --autodemo` serves everything behind one address (banks at `/bank/A/`, `/bank/B/`, `/bank/C/`);
+`render.yaml` and `Dockerfile.web` deploy it as a permanent link. See [docs/DEPLOY_ONLINE.md](docs/DEPLOY_ONLINE.md).
+
 ## Defence demo on one laptop
 
 ```bash

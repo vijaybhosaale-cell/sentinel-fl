@@ -474,6 +474,10 @@ class AggregatorNode:
         def _rg(q, body, h):
             return [self.registry[b] | {"view": self._bank_view(b)} for b in sorted(self.registry)]
 
+        @S.route("GET", "/api/portals")
+        def _portals(q, body, h):
+            return [{"bank": p.rsplit("/", 1)[-1], "path": p + "/"} for p in S.proxies]
+
         @S.route("GET", "/api/chain")
         def _chainv(q, body, h):
             return self.chain.view()

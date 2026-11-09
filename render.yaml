@@ -1,0 +1,11 @@
+# Render Blueprint: New > Blueprint > select this GitHub repository.
+services:
+  - type: web
+    name: sentinel-fl
+    runtime: docker
+    dockerfilePath: ./Dockerfile.web
+    plan: free
+    healthCheckPath: /api/overview
+    envVars:
+      - key: SENTINEL_ADMIN_TOKEN   # operator token for Start run, Approve, Attack lab, Ledger edit
+        sync: false                 # Render asks you for a value at deploy time

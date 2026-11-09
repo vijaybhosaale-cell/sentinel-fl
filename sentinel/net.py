@@ -30,6 +30,7 @@ class NodeServer:
     def __init__(self, role: str, host: str, port: int):
         self.role, self.host, self.port = role, host, port
         self.routes: dict[tuple[str, str], callable] = {}
+        self.proxies: dict[str, str] = {}   # path prefix -> upstream base URL (single-address gateway)
         self.pages = WEB / role
         self.httpd: ThreadingHTTPServer | None = None
 
@@ -59,7 +60,29 @@ class NodeServer:
             def _json(self, code: int, obj) -> None:
                 self._send(code, json.dumps(obj, default=_default).encode(), "application/json")
 
+            def _proxy(self, method: str, prefix: str, upstream: str):
+                rest = self.path[len(prefix):] or "/"
+                if not rest.startswith("/"):
+                    return self._json(404, {"error": "not found"})
+                n = int(self.headers.get("Content-Length") or 0)
+                data = self.rfile.read(n) if (method == "POST" and n) else None
+                hdrs = {k: v for k, v in self.headers.items() if k.lower() in ("content-type", "x-admin-token")}
+                req = urllib.request.Request(upstream + rest, data=data, method=method, headers=hdrs)
+                try:
+                    with urllib.request.urlopen(req, timeout=60) as r:
+                        return self._send(r.status, r.read(), r.headers.get("Content-Type", "application/octet-stream"))
+                except urllib.error.HTTPError as e:
+                    return self._send(e.code, e.read(), e.headers.get("Content-Type", "application/json"))
+                except (urllib.error.URLError, OSError):
+                    return self._json(502, {"error": "bank node not reachable"})
+
             def _dispatch(self, method: str):
+                for prefix, upstream in server.proxies.items():
+                    if self.path == prefix or self.path.startswith(prefix + "/") or self.path.startswith(prefix + "?"):
+                        if self.path == prefix:          # /bank/A -> /bank/A/ so relative browsing stays inside the portal
+                            self.send_response(301); self.send_header("Location", prefix + "/")
+                            self.send_header("Content-Length", "0"); self.end_headers(); return None
+                        return self._proxy(method, prefix, upstream)
                 u = urlparse(self.path)
                 q = {k: v[0] for k, v in parse_qs(u.query).items()}
                 body = None
