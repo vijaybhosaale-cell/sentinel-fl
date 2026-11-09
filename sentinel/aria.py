@@ -204,8 +204,11 @@ def _ask_rules(question: str, tools: Tools) -> dict:
                  (x["type"] == "update" and not x.get("accepted", True))]
         ans = f"Round {r['round']}: {len(ups)} updates recorded."
         if commit:
-            ans += (f" Aggregated with {commit['rule']} from banks {commit['accepted']} (record #{commit['idx']});"
-                    f" PR-AUC {commit['metrics']['pr_auc']}.")
+            pr = (commit.get("metrics") or {}).get("pr_auc")
+            if pr is None:     # distributed runs keep metrics in the state, not in the commit record
+                pr = next((m.get("pr_auc") for m in tools._state().get("metrics", []) if m.get("round") == r["round"]), None)
+            ans += f" Aggregated with {commit.get('rule')} from banks {commit.get('accepted')} (record #{commit['idx']})"
+            ans += f"; PR-AUC {pr}." if pr is not None else "."
         for p in probs:
             ans += f" Record #{p['idx']}: bank {p.get('bank')} - {p.get('reason', p['type'])}."
         return {"answer": ans, "tools": [{"tool": "get_round"}], "mode": "offline"}

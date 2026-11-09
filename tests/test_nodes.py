@@ -64,6 +64,9 @@ class TestDistributed(unittest.TestCase):
         self.assertGreater(ov["metrics"][-1]["pr_auc"], 0.4)
         self.assertTrue(call(p, "GET", "/api/verify")[1]["ok"])
         self.assertIn("Bank C", call(p, "GET", "/api/aria?q=did%20anyone%20poison%20the%20model")[1]["answer"])
+        code, rd = call(p, "GET", "/api/aria?q=what%20happened%20in%20round%205")
+        self.assertEqual(code, 200)
+        self.assertIn("Round 5", rd["answer"])
         res = call(p + 3, "GET", "/api/residency")[1]                    # bank C portal
         self.assertEqual(res["raw_rows_sent"], 0)
         types = {e["type"] for e in call(p, "GET", "/api/ledger?limit=500")[1]}
